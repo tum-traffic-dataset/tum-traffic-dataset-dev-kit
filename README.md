@@ -236,23 +236,25 @@ python tum-traffic-dataset-dev-kit/src/eval/evaluation.py --folder_path_ground_t
                                                           --object_min_points 5
 ```
 Final result when evaluating the [InfraDet3D](https://ieeexplore.ieee.org/document/10186723) camera-LiDAR fusion model on the TUM Traffic Intersection Dataset (test set):
-```
-point_clouds=registered			
-|Class	                |Occurrence (pred/gt)		|Precision	|Recall		|AP@0.1 (average precision)	
-|CAR	                |2018/1003			|71.75		|87.33		|71.64	
-|TRUCK	                |228/203			|91.20		|85.03		|91.03	
-|TRAILER		|116/132			|73.48		|71.06		|72.95	
-|VAN			|55/67				|76.95		|70.26		|76.48	
-|MOTORCYCLE		|27/31				|82.72		|70.71		|82.37	
-|BUS			|34/32				|99.93		|100.00		|99.93	
-|PEDESTRIAN		|144/128			|31.37		|25.49		|30.00	
-|BICYCLE		|177/67				|36.02		|80.77		|35.93	
-|EMERGENCY_VEHICLE	|1/0				|0.00		|0.00		|0.00	
-|OTHER			|1/4				|25.49		|6.37		|24.00	
-|			|2801/1704 (Total 10 classes)	|58.89		|59.70		|58.43	(3D mAP for 10 classes)
-|			|2628/1464 (Total 6 classes)	|68.83		|74.89		|68.48	(3D mAP for Car, Truck, Bus, Motorcycle, Pedestrian, Bicycle) 
 
-```
+
+
+|Class	           |Occurrence (pred/gt) |Precision|Recall |AP@0.1 |
+|:-----------------|--------------------:|--------:|------:|------:|	
+|CAR	           |2018/1003	         |71.75	   |87.33  |71.64  |	
+|TRUCK	           |228/203	         |91.20	   |85.03  |91.03  |
+|TRAILER	   |116/132	         |73.48	   |71.06  |72.95  |
+|VAN		   |55/67	         |76.95	   |70.26  |76.48  |
+|MOTORCYCLE	   |27/31	         |82.72	   |70.71  |82.37  |
+|BUS		   |34/32	         |99.93	   |100.00 |99.93  |
+|PEDESTRIAN	   |144/128              |31.37	   |25.49  |30.00  |
+|BICYCLE	   |177/67	         |36.02	   |80.77  |35.93  |
+|EMERGENCY_VEHICLE |1/0		         |0.00	   |0.00   |0.00   |
+|OTHER		   |1/4			 |25.49	   |6.37   |24.00  |
+|Total (10 classes)|2801/1704            |58.89	   |59.70  |58.43  |
+|Total (6 classes) |2628/1464            |68.83	   |74.89  |**68.48** | 
+
+
 The PointPillars model was trained on registered point clouds from 2 LiDARs with boxes that contain a minimum of 5 points. 
 For the camera modality (MonoDet3D) only Car and Bicycle detections were processed. 
 
