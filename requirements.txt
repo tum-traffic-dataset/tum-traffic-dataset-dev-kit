@@ -1,0 +1,25 @@
+numpy>=1.17
+opencv-python>=4.5
+matplotlib>=3.3
+scipy>=1.6
+argparse>=1.1
+pyyaml>=5.4
+pandas>=1.2
+tqdm>=4.60
+scikit-learn>=0.0
+bitarray>=1.6
+progressbar
+numba>=0.53
+
+-f https://download.pytorch.org/whl/cu113/torch_stable.html
+torch==1.12.1+cu113
+torchvision==0.13.1+cu113
+torchaudio==0.12.1
+
+cython>=0.29.32
+simplejson
+scikit-image>=0.19.3
+filterpy >=1.4.5
+prettytable>=3.7.0
+open3d==0.17.0
+protobuf==4.23.4
