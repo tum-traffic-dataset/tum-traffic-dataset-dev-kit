@@ -162,6 +162,7 @@ python tum-traffic-dataset-dev-kit/src/preprocessing/undistort_images.py --input
 ```
 An example between a distorted an undistorted image is shown below:
 ![undistortion_example](./img/undistortion_example.gif)
+Note, that the images provided in the download section, are already undistorted/rectified.
 
 ## 3. Point Cloud Pre-Processing
 
@@ -267,21 +268,21 @@ By downloading the dataset you agree to the [terms](https://a9-dataset.innovatio
 The TUM Traffic Dataset Development Kit scripts are released under MIT license as found in the license file.
 
 # Citation
-@inproceedings{zimmer2023tumtraf,
-  title={TUMTraf Intersection Dataset: All You Need for Urban 3D Camera-LiDAR Roadside Perception},
-  author={Zimmer, Walter and Cre{\ss}, Christian and Nguyen, Huu Tung and Knoll, Alois C},
-  publisher={IEEE},
-  booktitle={2023 IEEE Intelligent Transportation Systems Conference (ITSC)},
-  year={2023}
-}
+    @inproceedings{zimmer2023tumtraf,
+      title={TUMTraf Intersection Dataset: All You Need for Urban 3D Camera-LiDAR Roadside Perception},
+      author={Zimmer, Walter and Cre{\ss}, Christian and Nguyen, Huu Tung and Knoll, Alois C},
+      publisher={IEEE},
+      booktitle={2023 IEEE Intelligent Transportation Systems Conference (ITSC)},
+      year={2023}
+    }
 
-@inproceedings{zimmer2023infra,
-  title={InfraDet3D: Multi-Modal 3D Object Detection based on Roadside Infrastructure Camera and LiDAR Sensors},
-  author={Zimmer, Walter and Birkner, Joseph and Brucker, Marcel and Nguyen, Huu Tung and Petrovski, Stefan and Wang, Bohan and Knoll, Alois C.},
-  publisher = {IEEE},
-  booktitle={2023 IEEE Intelligent Vehicles Symposium (IV)},
-  year={2023}
-}
+    @inproceedings{zimmer2023infra,
+      title={InfraDet3D: Multi-Modal 3D Object Detection based on Roadside Infrastructure Camera and LiDAR Sensors},
+      author={Zimmer, Walter and Birkner, Joseph and Brucker, Marcel and Nguyen, Huu Tung and Petrovski, Stefan and Wang, Bohan and Knoll, Alois C.},
+      publisher={IEEE},
+      booktitle={2023 IEEE Intelligent Vehicles Symposium (IV)},
+      year={2023}
+    }
 
 # Contact
 
