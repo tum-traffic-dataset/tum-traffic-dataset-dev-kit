@@ -1,7 +1,7 @@
 # TUM Traffic Dataset Development Kit
 
 The TUM Traffic (`TUMTraf`) Dataset is based on roadside sensor data from the 3 km long  Providentia++ test field near Munich in Germany. The dataset includes anonymized and precision-timestamped multi-modal sensor and object data in high resolution, covering a variety of traffic situations. We provide camera and LiDAR frames from overhead gantry bridges with the corresponding objects labeled with 3D bounding boxes. The dataset contains the following subsets:
-- TUM Traffic A9 Dataset (`TUMTraf-A9`): Download [HERE](https://a9-dataset.com)
+- TUM Traffic A9 Highway Dataset (`TUMTraf-A9`): Download [HERE](https://a9-dataset.com)
 - TUM Traffic Intersection Dataset (`TUMTraf-I`): Download [HERE](https://innovation-mobility.com/tumtraf-dataset)
 - TUM Traffic Cooperative Dataset (`TUMTraf-C`) -> will be available soon
 
@@ -42,14 +42,14 @@ pip3 install --upgrade git+https://github.com/klintan/pypcd.git
 
 ## Internal Release History
 The TUM Traffic Dataset contains the following releases:
-* 2022-04: Released R00 TUM Traffic A9 Dataset (`TUMTraf-A9`)  
-* 2022-07: Released R01 TUM Traffic A9 Dataset (`TUMTraf-A9`) extension with sequences from real accidents
+* 2022-04: Released R00 TUM Traffic A9 Highway Dataset (`TUMTraf-A9`)  
+* 2022-07: Released R01 TUM Traffic A9 Highway Dataset (`TUMTraf-A9`) extension with sequences from real accidents
 * 2023-06: Released R02 TUM Traffic Intersection data (`TUMTraf-I`)
 * 2023-12: Planning to release R03 TUM Traffic Cooperative Dataset (`TUMTraf-C`)
 
 ## Dataset Structure
-#### 1) TUM Traffic A9 Dataset (`TUMTraf-A9`) 
-The TUM Traffic A9 Dataset (`TUMTraf-A9`) contains 5 subsets (`s00` to `s04`) and is structured in the following way:
+#### 1) TUM Traffic A9 Highway Dataset (`TUMTraf-A9`) 
+The TUM Traffic A9 Highway Dataset (`TUMTraf-A9`) contains 5 subsets (`s00` to `s04`) and is structured in the following way:
 
 The first 3 sets `tum_traffic_a9_r00_s00`, `tum_traffic_a9_r00_s01` and `tum_traffic_a9_r00_s02` contain image data (`.png`) from roadside cameras with corresponding label files (stored in OpenLABEL `.json` format) and calibration data:
 ``` 
@@ -79,8 +79,8 @@ The last two sets `tum_traffic_a9_r00_s03`, and `tum_traffic_a9_r00_s04` contain
 ```
 
 
-#### 2) TUM Traffic A9 Dataset (`TUMTraf-A9`) extension with sequences from real accidents
-The `tum_traffic_a9_r01` dataset contains 3 subsets (`s01` to `s03`) and is structured in the following way:
+#### 2) TUM Traffic A9 Highway Dataset (`TUMTraf-A9`) extension with sequences from real accidents
+The extended TUM Traffic A9 Highway Dataset additionally contains 3 subsets (`s01` to `s03`) and is structured in the following way:
 
 Example: tum_traffic_a9_dataset_r01_s01:
 ``` 
@@ -213,33 +213,48 @@ python tum-traffic-dataset-dev-kit/src/eval/evaluation.py --folder_path_ground_t
                                                           --folder_path_predictions ${FILE/DIR} \  
                                                           [--object_min_points ${NUM}]
 ```
-Dataformat of predictions - one TXT file per frame with the content (one line per predicted object): class x y z l w h rotation_z.<br>
-Example
+Data format of predictions can be KITTI or OpenLABEL.
+1) KITTI format: One `.txt` file per frame with the following content (one line per predicted object): class x y z l w h rotation_z.<br>
+Example:
 ```
 Car 16.0162 -28.9316 -6.45308 2.21032 3.74579 1.18687 2.75634
 Car 17.926 -19.4624 -7.0266 1.03365 0.97037 0.435425 0.82854
 ```
+
+2) [OpenLABEL](https://www.asam.net/index.php?eID=dumpFile&t=f&f=3876&token=413e8c85031ae64cc35cf42d0768627514868b2f) format: One `.json` file per frame. 
+
 Example call to compare one ground truth file with one prediction file visually:
 ```
 python tum-traffic-dataset-dev-kit/src/eval/evaluation.py --folder_path_ground_truth ~/tum_traffic_a9_dataset_r01_test/labels/1651673050_454284855_s110_lidar_ouster_south.json \
                                                           --folder_path_predictions ~/predictions/1651673050_454284855_s110_lidar_ouster_south.json \ 
-                                                          --object_min_points 0
+                                                          --object_min_points 5
 ```
-Example call to evaluate the whole set if ground truth bounding boxes enclose more than 20 points:
+Example call to evaluate the whole set if ground truth bounding boxes enclose more than 5 points:
 ```
 python tum-traffic-dataset-dev-kit/src/eval/evaluation.py --folder_path_ground_truth ~/tum_traffic_dataset_r01_test_set/labels \
                                                           --folder_path_predictions ~/detections \
-                                                          --object_min_points 20
+                                                          --object_min_points 5
 ```
-Final result when evaluating the A9-Dataset R1 test set vs. itself:
+Final result when evaluating the [InfraDet3D](https://ieeexplore.ieee.org/document/10186723) camera-LiDAR fusion model on the TUM Traffic Intersection Dataset (test set):
 ```
+point_clouds=registered			
+|Class	                |Occurrence (pred/gt)		|Precision	|Recall		|AP@0.1 (average precision)	
+|CAR	                |2018/1003			|71.75		|87.33		|71.64	
+|TRUCK	                |228/203			|91.20		|85.03		|91.03	
+|TRAILER		|116/132			|73.48		|71.06		|72.95	
+|VAN			|55/67				|76.95		|70.26		|76.48	
+|MOTORCYCLE		|27/31				|82.72		|70.71		|82.37	
+|BUS			|34/32				|99.93		|100.00		|99.93	
+|PEDESTRIAN		|144/128			|31.37		|25.49		|30.00	
+|BICYCLE		|177/67				|36.02		|80.77		|35.93	
+|EMERGENCY_VEHICLE	|1/0				|0.00		|0.00		|0.00	
+|OTHER			|1/4				|25.49		|6.37		|24.00	
+|			|2801/1704 (Total 10 classes)	|58.89		|59.70		|58.43	(3D mAP for 10 classes)
+|			|2628/1464 (Total 6 classes)	|68.83		|74.89		|68.48	(3D mAP for Car, Truck, Bus, Motorcycle, Pedestrian, Bicycle) 
 
-|AP@50             |overall     |Occurrence (pred/gt)|
-|Vehicle           |100.00      |2110/2110           |
-|Pedestrian        |100.00      |32/32               |
-|Bicycle           |100.00      |156/156             |
-|mAP               |100.00      |2298/2298 (Total)   |
 ```
+The PointPillars model was trained on registered point clouds from 2 LiDARs with boxes that contain a minimum of 5 points. 
+For the camera modality (MonoDet3D) only Car and Bicycle detections were processed. 
 
 # License
 
@@ -248,6 +263,23 @@ By downloading the dataset you agree to the [terms](https://a9-dataset.innovatio
 
 
 The TUM Traffic Dataset Development Kit scripts are released under MIT license as found in the license file.
+
+# Citation
+@inproceedings{zimmer2023tumtraf,
+  title={TUMTraf Intersection Dataset: All You Need for Urban 3D Camera-LiDAR Roadside Perception},
+  author={Zimmer, Walter and Cre{\ss}, Christian and Nguyen, Huu Tung and Knoll, Alois C},
+  publisher={IEEE},
+  booktitle={2023 IEEE Intelligent Transportation Systems Conference (ITSC)},
+  year={2023}
+}
+
+@inproceedings{zimmer2023infra,
+  title={InfraDet3D: Multi-Modal 3D Object Detection based on Roadside Infrastructure Camera and LiDAR Sensors},
+  author={Zimmer, Walter and Birkner, Joseph and Brucker, Marcel and Nguyen, Huu Tung and Petrovski, Stefan and Wang, Bohan and Knoll, Alois C.},
+  publisher = {IEEE},
+  booktitle={2023 IEEE Intelligent Vehicles Symposium (IV)},
+  year={2023}
+}
 
 # Contact
 
