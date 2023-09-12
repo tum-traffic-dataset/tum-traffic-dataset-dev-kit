@@ -39,6 +39,10 @@ pip3 install -r requirements.txt
 pip3 install --upgrade git+https://github.com/klintan/pypcd.git
 ```
 
+Add dev kit's root directory to `PYTHONPATH`:
+```
+export PYTHONPATH=$PYTHONPATH:/home/<USERNAME>/tum-traffic-dataset-dev-kit/
+```
 
 ## Internal Release History
 The TUM Traffic Dataset contains the following releases:
@@ -145,7 +149,7 @@ python tum-traffic-dataset-dev-kit/src/visualization/visualize_image_with_3d_box
 The script below draws labels on a LiDAR frame:
 
 ```
-python tum-traffic-dataset-dev-kit/src/visualization/visualize_point_cloud_with_labels.py --input_folder_path_point_clouds <INPUT_FOLDER_PATH_POINT_CLOUDS> \
+python tum-traffic-dataset-dev-kit/src/visualization/visualize_point_cloud_with_3d_boxes.py --input_folder_path_point_clouds <INPUT_FOLDER_PATH_POINT_CLOUDS> \
                                                                                           --input_folder_path_labels <INPUT_FOLDER_PATH_LABELS> \
                                                                                           --save_visualization_results \
                                                                                           --output_folder_path_visualization_results <OUTPUT_FOLDER_PATH_VISUALIZATION_RESULTS>
@@ -166,18 +170,31 @@ Note, that the images provided in the download section, are already undistorted/
 
 ## 3. Point Cloud Pre-Processing
 
-### 3.1 Point Cloud Registration
+### 3.1. Data Split
+The script below splits the dataset into `train` and `val`:
+
+```
+python tum-traffic-dataset-dev-kit/src/preprocessing/create_train_val_split.py --input_folder_path_dataset <INPUT_FOLDER_PATH_DATASET> \
+                                                                               --input_folder_path_data_split_root <INPUT_FOLDER_PATH_DATA_SPLIT_ROOT>
+```
+Example:
+```
+python tum-traffic-dataset-dev-kit/src/preprocessing/create_train_val_split.py --input_folder_path_dataset /home/<USERNAME>/tum_traffic_intersection_dataset_r02 \
+                                                                               --input_folder_path_data_split_root <INPUT_FOLDER_PATH_DATA_SPLIT_ROOT> 
+```
+
+### 3.2 Point Cloud Registration
 
 The following script can be used to register point clouds from two different LiDARs:
 ```
-python tum-traffic-dataset-dev-kit/src/preprocessing/register_point_clouds.py --folder_path_point_cloud_source <INPUT_FOLDER_PATH_POINT_CLOUDS_SOURCE> \
+python tum-traffic-dataset-dev-kit/src/registration/point_cloud_registration.py --folder_path_point_cloud_source <INPUT_FOLDER_PATH_POINT_CLOUDS_SOURCE> \
                                                              --folder_path_point_cloud_target <INPUT_FOLDER_PATH_POINT_CLOUDS_TARGET> \
                                                              --save_registered_point_clouds \
                                                              --output_folder_path_registered_point_clouds <OUTPUT_FOLDER_PATH_POINT_CLOUDS>
 ```
 ![registered_point_cloud](./img/registered_point_cloud.png)
 
-### 3.2 Noise Removal
+### 3.3 Noise Removal
 A LiDAR preprocessing module reduces noise in point cloud scans:
 
 ```
@@ -197,23 +214,18 @@ python tum-traffic-dataset-dev-kit/src/converter/conversion_openlabel_to_yolo.py
                                                                                  --output_folder_path_labels <OUTPUT_FOLDER_PATH_LABELS>
 ```
 
-
-## 5. Data Split
-The script below splits the dataset into `train` and `val`:
-
-```
-python tum-traffic-dataset-dev-kit/src/preprocessing/create_train_val_split.py --input_folder_path_dataset <INPUT_FOLDER_PATH_DATASET> \
-                                                                               --input_folder_path_data_split_root <INPUT_FOLDER_PATH_DATA_SPLIT_ROOT>
-```
-
-
 ## 6. Evaluation Script
 Finally, a model evaluation script is provided to benchmark your models on the A9-Dataset.
+
+Usage:
 ```
-python tum-traffic-dataset-dev-kit/src/eval/evaluation.py --folder_path_ground_truth ${FILE/DIR} \
-                                                          --folder_path_predictions ${FILE/DIR} \  
-                                                          [--object_min_points ${NUM}]
+python tum-traffic-dataset-dev-kit/src/eval/evaluation.py --camera_id <CAMERA_ID> --file_path_calibration_data <FILE_PATH_CALIBRATION_DATA> --folder_path_ground_truth /path/to/ground_truth --folder_path_predictions /path/to/predictions --object_min_points 5 [--use_superclasses] --prediction_type lidar3d_supervised --prediction_format openlabel --use_ouster_lidar_only
 ```
+Example:
+```
+python tum-traffic-dataset-dev-kit/src/eval/evaluation.py --camera_id s110_camera_basler_south1_8mm --file_path_calibration_data /home/user/tum-traffic-dataset-dev-kit/calib/s110_camera_basler_south1_8mm.json --folder_path_ground_truth /home/user/tum-traffic-intersection-dataset/test/labels_point_clouds --folder_path_predictions /home/user/tum-traffic-intersection-dataset/test/predictions --object_min_points 5 --prediction_type lidar3d_supervised --prediction_format openlabel --use_ouster_lidar_only
+```
+
 Data format of predictions can be KITTI or OpenLABEL.
 1) KITTI format: One `.txt` file per frame with the following content (one line per predicted object): class x y z l w h rotation_z.<br>
 Example:

@@ -19,8 +19,10 @@ from src.utils.eval_utils import compute_split_parts, overall_filter, parse_argu
 # Evaluation Script for A9 3D Object Detection
 ##################################
 #
-# Example usage:
-# python evaluation.py --camera_id <CAMERA_ID> --folder_path_ground_truth /path/to/ground_truth --folder_path_predictions /path/to/predictions --object_min_points 5 [--use_superclasses] --prediction_type lidar3d_supervised --prediction_format openlabel --use_ouster_lidar_only
+# Usage:
+# python evaluation.py --camera_id <CAMERA_ID> --file_path_calibration_data <FILE_PATH_CALIBRATION_DATA> --folder_path_ground_truth /path/to/ground_truth --folder_path_predictions /path/to/predictions --object_min_points 5 [--use_superclasses] --prediction_type lidar3d_supervised --prediction_format openlabel --use_ouster_lidar_only
+# Example:
+# python evaluation.py --camera_id s110_camera_basler_south1_8mm --file_path_calibration_data /home/user/tum-traffic-dataset-dev-kit/calib/s110_camera_basler_south1_8mm.json --folder_path_ground_truth /home/user/tum-traffic-intersection-dataset/test/labels_point_clouds --folder_path_predictions /home/user/tum-traffic-intersection-dataset/test/predictions --object_min_points 5 --prediction_type lidar3d_supervised --prediction_format openlabel --use_ouster_lidar_only
 
 import sys
 from pathlib import Path
