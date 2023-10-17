@@ -149,7 +149,7 @@ python tum-traffic-dataset-dev-kit/src/visualization/visualize_image_with_3d_box
 The script below draws labels on a LiDAR frame:
 
 ```
-python tum-traffic-dataset-dev-kit/src/visualization/visualize_point_cloud_with_3d_boxes.py --input_folder_path_point_clouds <INPUT_FOLDER_PATH_POINT_CLOUDS> \
+python tum-traffic-dataset-dev-kit/src/visualization/visualize_point_cloud_with_lidar_boxes.py --input_folder_path_point_clouds <INPUT_FOLDER_PATH_POINT_CLOUDS> \
                                                                                           --input_folder_path_labels <INPUT_FOLDER_PATH_LABELS> \
                                                                                           --save_visualization_results \
                                                                                           --output_folder_path_visualization_results <OUTPUT_FOLDER_PATH_VISUALIZATION_RESULTS>
