@@ -304,7 +304,7 @@ if __name__ == "__main__":
     # add file path to calibration data
     argparser.add_argument(
         "--file_path_calibration_data",
-        default="",
+        default="calib/s110_camera_basler_south1_8mm.json",
         help="File path to calibration data. Default: calib/calibration.json",
     )
     argparser.add_argument(
@@ -324,8 +324,8 @@ if __name__ == "__main__":
     )
     argparser.add_argument(
         "--viz_color_mode",
-        default="by_class",
-        help="Visualization color mode. Available modes are: [by_class, by_physical_color]",
+        default="by_category",
+        help="Visualization color mode. Available modes are: [by_category, by_sensor_type]",
     )
     argparser.add_argument(
         "--output_folder_path_visualization",
