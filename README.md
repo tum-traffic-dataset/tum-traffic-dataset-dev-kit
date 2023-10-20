@@ -139,7 +139,7 @@ python tum-traffic-dataset-dev-kit/src/visualization/visualize_image_with_3d_box
                                                                                       --input_folder_path_point_clouds <POINT_CLOUD_FOLDER_PATH> \
                                                                                       --input_folder_path_labels <LABEL_FOLDER_PATH> \
                                                                                       --viz_mode [box2d,box3d,point_cloud,track_history] \
-                                                                                      --viz_color_mode [by_category,by_track_id] \
+                                                                                      --viz_color_mode [by_category,by_sensor_type] \
                                                                                       --output_folder_path_visualization <OUTPUT_FOLDER_PATH>
 ```
  
@@ -149,10 +149,10 @@ python tum-traffic-dataset-dev-kit/src/visualization/visualize_image_with_3d_box
 The script below draws labels on a LiDAR frame:
 
 ```
-python tum-traffic-dataset-dev-kit/src/visualization/visualize_point_cloud_with_3d_boxes.py --input_folder_path_point_clouds <INPUT_FOLDER_PATH_POINT_CLOUDS> \
-                                                                                          --input_folder_path_labels <INPUT_FOLDER_PATH_LABELS> \
+python src/visualization/visualize_point_cloud_with_lidar_boxes.py --input_folder_path_point_clouds <POINT_CLOUD_FOLDER_PATH> \
+                                                                                          --input_folder_path_labels <LABEL_FOLDER_PATH> \
                                                                                           --save_visualization_results \
-                                                                                          --output_folder_path_visualization_results <OUTPUT_FOLDER_PATH_VISUALIZATION_RESULTS>
+                                                                                          --output_folder_path_visualization_results <OUTPUT_FOLDER_PATH>
 ```
 
 
