@@ -3,7 +3,7 @@
   "image_height": 1200,
   "key": "right",
   "info": "right side of image",
-  "intrinsic_matrix": [
+  "intrinsic_camera_matrix": [
     [
       1400.3096617691212,
       0.0,
@@ -37,7 +37,24 @@
       1.0
     ]
   ],
-   "dist_coefficients": [
+  "calibrated_intrinsic_camera_matrix": [
+    [
+      1400.3096617691212,
+      0.0,
+      967.7899705163408
+    ],
+    [
+      0.0,
+      1403.041082755918,
+      581.7195041357244
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "dist_coefficients": [
     -0.17018194636847647,
     0.12138270789030073,
     -0.00011663550730431874,

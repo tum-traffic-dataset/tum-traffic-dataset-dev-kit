@@ -12,7 +12,7 @@ def draw_line(img, start_point, end_point, color):
     img = cv2.line(img, start_point, end_point, color, 2)
 
 
-class ProvidentiaUtils:
+class Utils:
 
     def __init__(self):
         pass
@@ -22,82 +22,7 @@ class ProvidentiaUtils:
         lv = len(value)
         return tuple(int(value[i:i + lv // 3], 16) for i in range(0, lv, lv // 3))
 
-    def draw_3d_box(self, img, box_3d_label, color):
-        # draw bottom 4 lines
-        start_point = (int(box_3d_label["box3d_projected"]["bottom_left_front"][0] * 1920),
-                       int(box_3d_label["box3d_projected"]["bottom_left_front"][1] * 1200))
-        end_point = (int(box_3d_label["box3d_projected"]["bottom_left_back"][0] * 1920),
-                     int(box_3d_label["box3d_projected"]["bottom_left_back"][1] * 1200))
-        draw_line(img, start_point, end_point, color)
 
-        start_point = (int(box_3d_label["box3d_projected"]["bottom_left_back"][0] * 1920),
-                       int(box_3d_label["box3d_projected"]["bottom_left_back"][1] * 1200))
-        end_point = (int(box_3d_label["box3d_projected"]["bottom_right_back"][0] * 1920),
-                     int(box_3d_label["box3d_projected"]["bottom_right_back"][1] * 1200))
-        draw_line(img, start_point, end_point, color)
-
-        start_point = (int(box_3d_label["box3d_projected"]["bottom_right_back"][0] * 1920),
-                       int(box_3d_label["box3d_projected"]["bottom_right_back"][1] * 1200))
-        end_point = (int(box_3d_label["box3d_projected"]["bottom_right_front"][0] * 1920),
-                     int(box_3d_label["box3d_projected"]["bottom_right_front"][1] * 1200))
-        draw_line(img, start_point, end_point, color)
-
-        start_point = (int(box_3d_label["box3d_projected"]["bottom_right_front"][0] * 1920),
-                       int(box_3d_label["box3d_projected"]["bottom_right_front"][1] * 1200))
-        end_point = (int(box_3d_label["box3d_projected"]["bottom_left_front"][0] * 1920),
-                     int(box_3d_label["box3d_projected"]["bottom_left_front"][1] * 1200))
-        draw_line(img, start_point, end_point, color)
-
-        # draw top 4 lines
-        start_point = (int(box_3d_label["box3d_projected"]["top_left_front"][0] * 1920),
-                       int(box_3d_label["box3d_projected"]["top_left_front"][1] * 1200))
-        end_point = (int(box_3d_label["box3d_projected"]["top_left_back"][0] * 1920),
-                     int(box_3d_label["box3d_projected"]["top_left_back"][1] * 1200))
-        draw_line(img, start_point, end_point, color)
-
-        start_point = (int(box_3d_label["box3d_projected"]["top_left_back"][0] * 1920),
-                       int(box_3d_label["box3d_projected"]["top_left_back"][1] * 1200))
-        end_point = (int(box_3d_label["box3d_projected"]["top_right_back"][0] * 1920),
-                     int(box_3d_label["box3d_projected"]["top_right_back"][1] * 1200))
-        draw_line(img, start_point, end_point, color)
-
-        start_point = (int(box_3d_label["box3d_projected"]["top_right_back"][0] * 1920),
-                       int(box_3d_label["box3d_projected"]["top_right_back"][1] * 1200))
-        end_point = (int(box_3d_label["box3d_projected"]["top_right_front"][0] * 1920),
-                     int(box_3d_label["box3d_projected"]["top_right_front"][1] * 1200))
-        draw_line(img, start_point, end_point, color)
-
-        start_point = (int(box_3d_label["box3d_projected"]["top_right_front"][0] * 1920),
-                       int(box_3d_label["box3d_projected"]["top_right_front"][1] * 1200))
-        end_point = (int(box_3d_label["box3d_projected"]["top_left_front"][0] * 1920),
-                     int(box_3d_label["box3d_projected"]["top_left_front"][1] * 1200))
-        draw_line(img, start_point, end_point, color)
-        #img = cv2.putText(img, box_3d_label["id"], start_point, cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
-
-        # draw 4 vertical lines
-        start_point = (int(box_3d_label["box3d_projected"]["bottom_left_front"][0] * 1920),
-                       int(box_3d_label["box3d_projected"]["bottom_left_front"][1] * 1200))
-        end_point = (int(box_3d_label["box3d_projected"]["top_left_front"][0] * 1920),
-                     int(box_3d_label["box3d_projected"]["top_left_front"][1] * 1200))
-        draw_line(img, start_point, end_point, color)
-
-        start_point = (int(box_3d_label["box3d_projected"]["bottom_left_back"][0] * 1920),
-                       int(box_3d_label["box3d_projected"]["bottom_left_back"][1] * 1200))
-        end_point = (int(box_3d_label["box3d_projected"]["top_left_back"][0] * 1920),
-                     int(box_3d_label["box3d_projected"]["top_left_back"][1] * 1200))
-        draw_line(img, start_point, end_point, color)
-
-        start_point = (int(box_3d_label["box3d_projected"]["bottom_right_back"][0] * 1920),
-                       int(box_3d_label["box3d_projected"]["bottom_right_back"][1] * 1200))
-        end_point = (int(box_3d_label["box3d_projected"]["top_right_back"][0] * 1920),
-                     int(box_3d_label["box3d_projected"]["top_right_back"][1] * 1200))
-        draw_line(img, start_point, end_point, color)
-
-        start_point = (int(box_3d_label["box3d_projected"]["bottom_right_front"][0] * 1920),
-                       int(box_3d_label["box3d_projected"]["bottom_right_front"][1] * 1200))
-        end_point = (int(box_3d_label["box3d_projected"]["top_right_front"][0] * 1920),
-                     int(box_3d_label["box3d_projected"]["top_right_front"][1] * 1200))
-        draw_line(img, start_point, end_point, color)
 
 
 if __name__ == "__main__":
@@ -113,7 +38,7 @@ if __name__ == "__main__":
     label_folder_path = args.label_folder_path
     output_folder_path = args.output_folder_path
 
-    utils = ProvidentiaUtils()
+    utils = Utils()
 
     image_file_paths = sorted(os.listdir(image_sequence_folder_path))
     label_file_paths = sorted(os.listdir(label_folder_path))
@@ -153,7 +78,7 @@ if __name__ == "__main__":
                 color = "#C7C7C7"
             color = utils.hex_to_rgb(color)
             color = (color[2], color[1], color[0])
-            utils.draw_3d_box(img, box_3d_label, color)
+            utils.draw_3d_box_by_keypoints(img, box_3d_label, color)
 
         if output_folder_path:
             if not os.path.isdir(output_folder_path):

@@ -3,8 +3,8 @@ import json
 from pathlib import Path
 import numpy as np
 
-from src.utils.utils import check_corners_within_image, get_corners
-from src.utils.detection import Detection, detections_to_openlabel
+from src.utils.utils import check_corners_within_image, get_cuboid_corners
+from src.utils.detection import Detection, save_to_openlabel
 from src.utils.perspective import parse_perspective
 from src.utils.vis_utils import VisualizationUtils
 from scipy.spatial.transform import Rotation as R
@@ -135,7 +135,7 @@ if __name__ == "__main__":
                 detection.dimensions[1],
                 detection.dimensions[2],
             ]
-            corners = get_corners(cuboid)
+            corners = get_cuboid_corners(cuboid)
             if args.coordinate_system_origin == "s110_lidar_ouster_south":
                 corner_points_2d = perspective.project_from_lidar_south_to_image(np.array(corners).T)
             elif args.coordinate_system_origin == "s110_lidar_ouster_north":
@@ -148,4 +148,4 @@ if __name__ == "__main__":
             if check_corners_within_image(corner_points_2d.T):
                 detections_valid.append(detection)
         print("processing file: ", file_name)
-        detections_to_openlabel(detections_valid, file_name, Path(args.output_folder_path_boxes_filtered))
+        save_to_openlabel(detections_valid, file_name, Path(args.output_folder_path_boxes_filtered))

@@ -3,11 +3,19 @@ import json
 from pathlib import Path
 import numpy as np
 
+import uuid
 from internal.src.tracking.tracker import BoxTracker
-from src.utils.detection import detections_to_openlabel, Detection
+from src.utils.detection import save_to_openlabel, Detection
 from src.utils.vis_utils import VisualizationUtils
 from scipy.spatial.transform import Rotation as R
 import argparse
+
+def generate_uuids(num_uuids):
+    uuids = []
+    for i in range(num_uuids):
+        uuids.append(str(uuid.uuid4()))
+    return uuids
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -33,17 +41,28 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if not os.path.exists(args.output_folder_path_boxes_tracked):
         os.makedirs(args.output_folder_path_boxes_tracked)
+
+    mapping_id_to_uuid = generate_uuids(10000)
+
+    # TODO:
+    # create SDRT tracker
     tracker = BoxTracker(max_prediction_age=int(args.max_age))
+    # create PolyMOT tracker
+    #tracker = PolyMOTTracker(max_prediction_age=int(args.max_age))
     for file_name in sorted(os.listdir(args.input_folder_path_boxes)):
         label_data = json.load(open(os.path.join(args.input_folder_path_boxes, file_name)))
         detections = []
         frame_id_str = None
         frame_properties = None
-        coordinate_systems = label_data["openlabel"]["coordinate_systems"]
+        if "coordinate_systems" in label_data["openlabel"]:
+            coordinate_systems = label_data["openlabel"]["coordinate_systems"]
+        else:
+            coordinate_systems = {}
         if "streams" in label_data["openlabel"]:
             streams = label_data["openlabel"]["streams"]
         else:
             streams = None
+        id = 0
         for frame_id, frame_obj in label_data["openlabel"]["frames"].items():
             frame_id_str = str(frame_id)
             if "frame_properties" in frame_obj:
@@ -95,6 +114,7 @@ if __name__ == "__main__":
                     score = -1
                 detections.append(
                     Detection(
+                        id=id,
                         uuid=object_id,
                         category=label["object_data"]["type"],
                         location=np.array([[cuboid[0]], [cuboid[1]], [cuboid[2]]]),
@@ -109,8 +129,16 @@ if __name__ == "__main__":
                         sensor_id=sensor_id,
                     )
                 )
+                id += 1
+
+        # sort tracking
         detections = tracker.update(detections)
-        detections_to_openlabel(
+
+        # update uuids
+        for detection in detections:
+            detection.uuid = mapping_id_to_uuid[detection.id]
+
+        save_to_openlabel(
             detections,
             file_name,
             Path(args.output_folder_path_boxes_tracked),

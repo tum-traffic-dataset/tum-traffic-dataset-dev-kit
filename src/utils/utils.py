@@ -4,7 +4,37 @@ from scipy.spatial.transform import Rotation as R
 IMAGE_WIDTH = 1920
 IMAGE_HEIGHT = 1200
 
-# a9 dataset IDs
+providentia_to_tum_traffic_category_mapping = {
+    "PRE_TRACK": "OTHER",
+    "OTHER": "OTHER",
+    "PEDESTRIAN": "PEDESTRIAN",
+    "BIKE": "BICYCLE",
+    "CAR": "CAR",
+    "TRUCK": "TRUCK",
+    "BUS": "BUS",
+    "CONSTRUCTION_VEHICLE": "TRUCK",
+    "DYNAMIC_TRAFFIC_SIGN": "OTHER",
+    "TRAFFICSIGN": "OTHER",
+    "ANIMAL": "OTHER",
+    "OBSTACLE": "OTHER",
+    "CONSTRUCTIONSITEDELIMITER": "OTHER"
+}
+
+providentia_id_to_class_name_mapping = ["PRE_TRACK",
+                                        "OTHER",
+                                        "PEDESTRIAN",
+                                        "BIKE",
+                                        "CAR",
+                                        "TRUCK",
+                                        "BUS",
+                                        "CONSTRUCTION_VEHICLE",
+                                        "DYNAMIC_TRAFFIC_SIGN",
+                                        "TRAFFICSIGN",
+                                        "ANIMAL",
+                                        "OBSTACLE",
+                                        "CONSTRUCTIONSITEDELIMITER"]
+
+# TUM Traffic Dataset IDs
 id_to_class_name_mapping = {
     "0": {
         "class_label_de": "PKW",
@@ -177,7 +207,7 @@ mscoco_class_name_to_id_mapping = {
 }
 
 
-def get_corners(cuboid):
+def get_cuboid_corners(cuboid, boxes_coordinate_system_origin=None):
     l = cuboid[7]
     w = cuboid[8]
     h = cuboid[9]
@@ -189,6 +219,9 @@ def get_corners(cuboid):
             [-h / 2, -h / 2, -h / 2, -h / 2, h / 2, h / 2, h / 2, h / 2],
         ]
     )
+    if boxes_coordinate_system_origin == "common_road":
+        # add half of the height to the z coordinate
+        bounding_box[2, :] += h / 2
 
     translation = cuboid[:3]
     # Repeat the [x, y, z] eight times

@@ -8,6 +8,7 @@ from typing import List
 import cv2
 import numpy as np
 from bitarray import bitarray
+from distinctipy import distinctipy
 from matplotlib import cm, pyplot as plt
 import matplotlib as mpl
 import open3d as o3d
@@ -17,7 +18,9 @@ from scipy.spatial.transform import Rotation as R
 from src.utils.detection import Detection
 from src.utils.transformation import transform_base_to_lidar
 from src.utils.perspective import Perspective
-from src.utils.utils import get_corners, id_to_class_name_mapping, class_name_to_id_mapping
+from src.utils.utils import get_cuboid_corners, id_to_class_name_mapping, class_name_to_id_mapping
+
+import pickle
 
 IMAGE_WIDTH = 1920
 IMAGE_HEIGHT = 1200
@@ -25,17 +28,126 @@ IMAGE_HEIGHT = 1200
 
 class VisualizationUtils:
     def __init__(self):
-        pass
+        # TODO: automatically calculate num colors
+        # s110
+        # self.num_colors = 20
+        # s40/s50
+        self.num_colors = 100
+        # cm = plt.get_cmap('gist_rainbow')
+        # self.random_colors = [cm(1. * i / self.num_colors) for i in range(self.num_colors)]
+        self.random_colors = distinctipy.get_colors(self.num_colors, pastel_factor=0.2)
+        # load uuid to color mapping to have matching colors of one object in multiple frames
+        self.track_id_to_color_mapping = {}
+        if os.path.isfile("id_to_color_mapping.txt") and os.path.exists("id_to_color_mapping.txt"):
+            with open("id_to_color_mapping.txt", "rb") as color_file:
+                self.track_id_to_color_mapping = pickle.load(color_file)
+        # else:
+        #     open("id_to_color_mapping.txt", 'w').close()
+
+    def __del__(self):
+        if os.path.isfile("id_to_color_mapping.txt") and os.path.exists("id_to_color_mapping.txt"):
+            with open("id_to_color_mapping.txt", "wb") as color_file:
+                pickle.dump(self.track_id_to_color_mapping, color_file)
 
     def draw_line(self, img, start_point, end_point, color):
         cv2.line(img, start_point, end_point, color, 3)
 
     def get_projection_matrix(self, camera_id, lidar_id, boxes_coordinate_system_origin):
-        # TODO: load calibration values from json calib files
+        # TODO: load calibration values from json calib files!!!
         projection_matrix = None
-        if camera_id == "s110_camera_basler_south1_8mm" and lidar_id == "s110_lidar_ouster_south":
+        if camera_id == "s040_camera_basler_north_16mm":
+            projection_matrix = np.array(
+                [
+                    [
+                        -416.844941,
+                        2892.59647,
+                        -247.06652,
+                        235051.435
+                    ],
+                    [
+                        28.8849541,
+                        -53.8999902,
+                        -2844.3092,
+                        8880.6336
+                    ],
+                    [
+                        -0.96293102,
+                        0.15630576,
+                        -0.2198462,
+                        443.097864
+                    ]
+                ]
+            )
+        elif camera_id == "s040_camera_basler_north_50mm":
+            projection_matrix = np.array([
+                [
+                    -535.802521,
+                    9090.03991,
+                    -37.2093177,
+                    382610.364
+                ],
+                [
+                    -47.7936014,
+                    35.1841562,
+                    -9031.53469,
+                    97282.6614
+                ],
+                [
+                    -0.995558291,
+                    0.0755554009,
+                    -0.0561700232,
+                    465.221911
+                ]
+            ])
+        elif camera_id == "s050_camera_basler_south_16mm":
+            projection_matrix = np.array(
+                [
+                    [
+                        953.327898,
+                        -2815.07218,
+                        -210.738663,
+                        -15398.3725
+                    ],
+                    [
+                        -31.2745828,
+                        24.4015771,
+                        -2864.62252,
+                        23180.4175
+                    ],
+                    [
+                        0.98093986,
+                        0.00547866,
+                        -0.19423435,
+                        0.780686139
+                    ]
+                ])
+        elif camera_id == "s050_camera_basler_south_50mm":
+            projection_matrix = np.array(
+                [
+                    [
+                        1250.42963,
+                        -8808.77311,
+                        -111.485694,
+                        -45896.5209
+                    ],
+                    [
+                        -55.8584708,
+                        72.8689486,
+                        -8823.5344,
+                        73990.3221
+                    ],
+                    [
+                        0.99541545,
+                        0.0757193,
+                        -0.05843522,
+                        0.077429189
+                    ]
+                ]
+            )
+        elif camera_id == "s110_camera_basler_south1_8mm" and lidar_id == "s110_lidar_ouster_south":
             # R02 for TUMTraf-I (intersection dataset)
-            # R03 for TUMTraf-C (cooperative dataset)
+            # R04 for TUMTraf-V2X (V2X cooperative perception dataset)
+            # TODO: make this configurable and load from parameters!!!
             release = "R02"
             if release == "R02":
                 # projection matrix from s110_lidar_ouster_south to s110_camera_basler_south1
@@ -49,7 +161,7 @@ class VisualizationUtils:
                     ],
                     dtype=float,
                 )
-            elif release == "R03":
+            elif release == "R04":
                 intrinsic_camera_matrix = np.array([[-1301.42, 0, 940.389], [0, -1299.94, 674.417], [0, 0, 1]])
                 extrinsic_matrix = np.array(
                     [
@@ -65,7 +177,7 @@ class VisualizationUtils:
                 [[1315.56, 0, 969.353, 0.0], [0, 1368.35, 579.071, 0.0], [0, 0, 1, 0.0]], dtype=float
             )
             # manual calibration, optimizing intrinsics and extrinsics
-            extrinsic_matrix_lidar_to_base = np.array(
+            transformation_matrix_lidar_to_base = np.array(
                 [
                     [0.247006, -0.955779, -0.15961, -16.8017],
                     [0.912112, 0.173713, 0.371316, 4.66979],
@@ -75,7 +187,7 @@ class VisualizationUtils:
                 dtype=float,
             )
             # extrinsic base to south2 camera
-            extrinsic_matrix_base_to_camera = np.array(
+            transformation_matrix_base_to_camera = np.array(
                 [
                     [0.8924758822566284, 0.45096261644035174, -0.01093243630327495, 14.921784677055939],
                     [0.29913535165414396, -0.6097951995429897, -0.7339399539506467, 13.668310799382738],
@@ -85,39 +197,58 @@ class VisualizationUtils:
                 dtype=float,
             )
             extrinsic_matrix_lidar_to_camera = np.matmul(
-                extrinsic_matrix_base_to_camera, extrinsic_matrix_lidar_to_base
+                transformation_matrix_base_to_camera, transformation_matrix_lidar_to_base
             )
             projection_matrix = np.matmul(intrinsic_camera_matrix, extrinsic_matrix_lidar_to_camera)
         elif camera_id == "s110_camera_basler_south1_8mm" and lidar_id == "s110_lidar_ouster_north":
-            # optimized intrinsic (lidar to base calibration)
-            intrinsic_camera_matrix = np.array(
-                [[1305.59, 0, 933.819, 0], [0, 1320.61, 609.602, 0], [0, 0, 1, 0]], dtype=float
-            )
+            # NOTE: the projection matrix below only works for Release 02 of TUMTraf-I dataset
+            # TODO: calculate projection matrix for Release 04 (TUMTraf-V2X dataset)
+            release = "R02"
+            if release == "R02":
+                # optimized intrinsic (lidar to base calibration)
+                intrinsic_camera_matrix = np.array(
+                    [[1305.59, 0, 933.819, 0], [0, 1320.61, 609.602, 0], [0, 0, 1, 0]], dtype=float
+                )
 
-            # extrinsic lidar north to base
-            extrinsic_matrix_lidar_to_base = np.array(
-                [
-                    [-0.064419, -0.997922, 0.00169282, -2.08748],
-                    [0.997875, -0.0644324, -0.00969147, 0.226579],
-                    [0.0097804, 0.0010649, 0.999952, 8.29723],
-                    [0.0, 0.0, 0.0, 1.0],
-                ],
-                dtype=float,
-            )
-            # extrinsic base to south1 camera
-            extrinsic_matrix_base_to_camera = np.array(
-                [
-                    [0.9530205584452789, -0.3026130702071279, 0.013309580025851253, 1.7732651490941862],
-                    [-0.1291778833442192, -0.4457786636335154, -0.8857733668968741, 7.609039571774588],
-                    [0.27397972486181504, 0.842440925400074, -0.4639271468406554, 4.047780978836272],
-                    [0.0, 0.0, 0.0, 1.0],
-                ],
-                dtype=float,
-            )
-            extrinsic_matrix_lidar_to_camera = np.matmul(
-                extrinsic_matrix_base_to_camera, extrinsic_matrix_lidar_to_base
-            )
-            projection_matrix = np.matmul(intrinsic_camera_matrix, extrinsic_matrix_lidar_to_camera)
+                # extrinsic lidar north to base
+                transformation_matrix_lidar_to_base = np.array(
+                    [
+                        [-0.064419, -0.997922, 0.00169282, -2.08748],
+                        [0.997875, -0.0644324, -0.00969147, 0.226579],
+                        [0.0097804, 0.0010649, 0.999952, 8.29723],
+                        [0.0, 0.0, 0.0, 1.0],
+                    ],
+                    dtype=float,
+                )
+                # extrinsic base to south1 camera
+                transformation_matrix_base_to_camera = np.array(
+                    [
+                        [0.9530205584452789, -0.3026130702071279, 0.013309580025851253, 1.7732651490941862],
+                        [-0.1291778833442192, -0.4457786636335154, -0.8857733668968741, 7.609039571774588],
+                        [0.27397972486181504, 0.842440925400074, -0.4639271468406554, 4.047780978836272],
+                        [0.0, 0.0, 0.0, 1.0],
+                    ],
+                    dtype=float,
+                )
+                extrinsic_matrix_lidar_to_camera = np.matmul(
+                    transformation_matrix_base_to_camera, transformation_matrix_lidar_to_base
+                )
+                projection_matrix = np.matmul(intrinsic_camera_matrix, extrinsic_matrix_lidar_to_camera)
+                print("projection_matrix", repr(projection_matrix))
+                # correct projection matrix for R2
+                projection_matrix = np.array([[290.06440167, -1522.65885503, -417.08293461, -398.03125035],
+                                              [-88.96283956, 6.86258619, -1451.78013497, 454.22071755],
+                                              [0.81846385, -0.32818492, -0.47160557, -0.18257704]])
+
+                # NOTE: This is the wrong projection matrix from openlabel file.
+                # projection_matrix = np.array([[2.98092042e+02, -1.48369084e+03, -4.45556647e+02, -1.15875824e+03],
+                #                               [-8.52928965e+01, 6.41064053e-01, -1.40961433e+03, 3.38177149e+02],
+                #                               [8.01700000e-01, -3.36123000e-01, -4.94264000e-01, -8.37352000e-01]])
+                # TODO: Fix openlabel files with correct projection matrix in R2
+            elif release == "R04":
+                # TODO: calculate projection matrix for Release 04 (TUMTraf-V2X dataset)
+                raise NotImplementedError("TODO: calculate projection matrix for Release 04 (TUMTraf-V2X dataset).")
+                sys.exit(1)
         elif camera_id == "s110_camera_basler_south2_8mm" and lidar_id == "s110_lidar_ouster_north":
             # projection matrix from s110_lidar_ouster_north to s110_camera_basler_south2
             intrinsic_camera_matrix = np.array(
@@ -133,6 +264,14 @@ class VisualizationUtils:
                 dtype=float,
             )
             projection_matrix = np.matmul(intrinsic_camera_matrix, extrinsic_matrix)
+            # [[ 1318.95273325,  -859.15213894,  -289.13390611, 11272.03223502],
+            #        [   90.01799314,    -2.9727517 , -1445.63809767,   585.78988153],
+            #        [    0.876766  ,     0.344395  ,    -0.335669  ,    -7.26891   ]])
+
+            # from label file
+            # projection_matrix = np.array([[1.31895273e+03, -8.59152139e+02, -2.89133906e+02,1.12720322e+04],
+            #                               [9.00179931e+01, -2.97275170e+00, -1.44563810e+03,5.85789882e+02],
+            #                               [8.76766000e-01, 3.44395000e-01, -3.35669000e-01,-7.26891000e+00]])
         elif camera_id == "s110_camera_basler_east_8mm" and lidar_id == "s110_lidar_ouster_south":
             projection_matrix = np.array(
                 [
@@ -158,10 +297,11 @@ class VisualizationUtils:
                  [0.9841844439506531, 0.1303769648075104, 0.1199281811714172, -0.1664766669273376]])
 
         else:
-            print("Error. Unknown camera passed: ", camera_id, ". Exiting...")
+            print("Error. Unknown camera/LiDAR ID passed: camera_id=", camera_id, ", lidar_id=", lidar_id,
+                  ". Exiting...")
             sys.exit()
 
-        if boxes_coordinate_system_origin == "s110_base":
+        if boxes_coordinate_system_origin == "s110_base" and lidar_id != "vehicle_lidar_robosense":
             if camera_id == "s110_camera_basler_south1_8mm":
                 # projection matrix from s110_base to s110_camera_basler_south1_8mm (camera to hd map calibration)
                 projection_matrix = np.array(
@@ -180,6 +320,45 @@ class VisualizationUtils:
                         [-0.3376460291207414, 0.6517534297474759, -0.679126369559744, -5.630430017833277],
                     ]
                 )
+            elif camera_id == "vehicle_camera_basler_16mm":
+                intrinsic_camera_matrix = np.array([
+                    [
+                        2788.86072,
+                        0,
+                        907.839058
+                    ],
+                    [
+                        0,
+                        2783.31261,
+                        589.071478
+                    ],
+                    [
+                        0,
+                        0,
+                        1
+                    ]
+                ])
+                extrinsic_matrix_s110_base_to_vehicle_camera = np.array([
+                    [
+                        -0.10853248450718671,
+                        0.9802219683449281,
+                        0.16548753616347203,
+                        17.58632616863186
+                    ],
+                    [
+                        -0.05018854624653521,
+                        -0.17166166576987898,
+                        0.9838771024765322,
+                        27.38400788218499
+                    ],
+                    [
+                        0.9928247589397987,
+                        0.0984767159520325,
+                        0.06782674254885492,
+                        -0.023219830174785155
+                    ]
+                ])
+                projection_matrix = np.matmul(intrinsic_camera_matrix, extrinsic_matrix_s110_base_to_vehicle_camera)
             else:
                 print("Error. Unknown camera passed: ", camera_id, ". Exiting...")
                 sys.exit()
@@ -193,8 +372,8 @@ class VisualizationUtils:
     def draw_2d_box(self, img, box_label, color):
         cv2.rectangle(img, (box_label[0], box_label[1]), (box_label[2], box_label[3]), color, 1)
 
-    def project_point_cloud_to_image(self, image, point_cloud, lidar_id, camera_id):
-        points_3d = np.asarray(point_cloud.points)
+    def project_point_cloud_to_image(self, image, points_3d, lidar_id, camera_id):
+        overlay = image.copy()
 
         # remove rows having all zeros (131k points -> 59973 points)
         points_3d = points_3d[~np.all(points_3d == 0, axis=1)]
@@ -239,10 +418,12 @@ class VisualizationUtils:
                         color_rgba[1] * 255,
                         color_rgba[2] * 255,
                     )
-                    cv2.circle(image, (pos_x, pos_y), 4, color_rgb, thickness=-1)
-                    # print("pos_x: %f, pos_y: %f" % (pos_x, pos_y))
+                    cv2.circle(overlay, (pos_x, pos_y), 4, color_rgb, thickness=-1)
+
         print("num points within image: ", num_points_within_image)
-        return image
+        alpha = 0.7
+        image_with_transparent_points = cv2.addWeighted(overlay, alpha, image, 1 - alpha, 0)
+        return image_with_transparent_points
 
     def project_3d_box_to_2d(self, points_3d, camera_id, lidar_id, boxes_coordinate_system_origin):
         points_3d = np.transpose(points_3d)
@@ -253,6 +434,9 @@ class VisualizationUtils:
         points = np.matmul(projection_matrix, points_3d[:4, :])
         # filter out points behind camera
         points = points[:, points[2] > 0]
+        # return None if no points are visible
+        if points.shape[1] == 0:
+            return None
         # Divide x and y values by z (camera pinhole model).
         image_points = points[:2] / points[2]
 
@@ -325,8 +509,8 @@ class VisualizationUtils:
                     text += str(detection.id)
                 else:
                     text += str(detection_index)
-                if detection.speed is not None:
-                    text += f" ({detection.speed[0]:.2f}, {detection.speed[1]:.2f})"
+                if detection.velocity is not None:
+                    text += f" ({detection.velocity[0]:.2f}, {detection.velocity[1]:.2f})"
                 cv2.rectangle(
                     image,
                     projected_center + [-2, 3],
@@ -339,25 +523,22 @@ class VisualizationUtils:
                 )
 
     def draw_3d_box(self, img, box_label, color, camera_id, lidar_id, boxes_coordinate_system_origin, perspective):
-        l = float(box_label["object_data"]["cuboid"]["val"][7])
-        w = float(box_label["object_data"]["cuboid"]["val"][8])
-        h = float(box_label["object_data"]["cuboid"]["val"][9])
-
-        quat_x = float(box_label["object_data"]["cuboid"]["val"][3])
-        quat_y = float(box_label["object_data"]["cuboid"]["val"][4])
-        quat_z = float(box_label["object_data"]["cuboid"]["val"][5])
-        quat_w = float(box_label["object_data"]["cuboid"]["val"][6])
-        roll, pitch, yaw = R.from_quat([quat_x, quat_y, quat_z, quat_w]).as_euler("xyz", degrees=True)
-
-        location = np.array(
-            [
-                [float(box_label["object_data"]["cuboid"]["val"][0])],
-                [float(box_label["object_data"]["cuboid"]["val"][1])],
-                [float(box_label["object_data"]["cuboid"]["val"][2])],
-            ]
-        )
-
-        if boxes_coordinate_system_origin == "s110_base":
+        if boxes_coordinate_system_origin == "s110_base" and lidar_id != "vehicle_lidar_robosense":
+            l = float(box_label["object_data"]["cuboid"]["val"][7])
+            w = float(box_label["object_data"]["cuboid"]["val"][8])
+            h = float(box_label["object_data"]["cuboid"]["val"][9])
+            quat_x = float(box_label["object_data"]["cuboid"]["val"][3])
+            quat_y = float(box_label["object_data"]["cuboid"]["val"][4])
+            quat_z = float(box_label["object_data"]["cuboid"]["val"][5])
+            quat_w = float(box_label["object_data"]["cuboid"]["val"][6])
+            roll, pitch, yaw = R.from_quat([quat_x, quat_y, quat_z, quat_w]).as_euler("xyz", degrees=True)
+            location = np.array(
+                [
+                    [float(box_label["object_data"]["cuboid"]["val"][0])],
+                    [float(box_label["object_data"]["cuboid"]["val"][1])],
+                    [float(box_label["object_data"]["cuboid"]["val"][2])],
+                ]
+            )
             yaw = radians(yaw)
             bottom_corners = np.array(
                 [
@@ -375,25 +556,15 @@ class VisualizationUtils:
             corners = np.hstack((bottom_corners, bottom_corners + height_offset))
             points_2d = perspective.project_from_base_to_image(corners, filter_behind=True).astype(int)
         else:
-            points_3d = get_corners(box_label["object_data"]["cuboid"]["val"])
+            points_3d = get_cuboid_corners(box_label["object_data"]["cuboid"]["val"],
+                                           boxes_coordinate_system_origin=boxes_coordinate_system_origin)
             points_2d = self.project_3d_box_to_2d(points_3d, camera_id, lidar_id, boxes_coordinate_system_origin)
 
+        if points_2d is None:
+            return None
         if points_2d.shape[0] == 2 and points_2d.shape[1] > 1:
             points_2d = np.array(points_2d, dtype=int)
             points_2d = points_2d.T
-
-            x_min = min(points_2d[:, 0])
-            y_min = min(points_2d[:, 1])
-
-            x_max = max(points_2d[:, 0])
-            y_max = max(points_2d[:, 1])
-
-            category = box_label["object_data"]["name"]
-            if category == "EMERGENCY_VEHICLE":
-                label = box_label["object_data"]["type"] + "_" + category.split("_")[2][:3]
-            else:
-                label = box_label["object_data"]["type"] + "_" + category.split("_")[1][:3]
-            # label = box_label["object_data"]["type"]
 
             if "attributes" in box_label["object_data"]["cuboid"]:
                 attribute = self.get_attribute_by_name(
@@ -429,8 +600,7 @@ class VisualizationUtils:
                 else:
                     self.draw_line(img, points_2d[2], points_2d[7], color)
                     self.draw_line(img, points_2d[3], points_2d[6], color)
-                # if input_type != "labels":
-                self.plot_banner(img, x_min, y_min, x_max, y_max, color, label)
+        return points_2d
 
     @staticmethod
     def get_attribute_by_name(attribute_list, attribute_name):
@@ -444,7 +614,7 @@ class VisualizationUtils:
             object_id
     ):
         quaternion = R.from_euler("xyz", [0, 0, rotation_yaw], degrees=False).as_quat()
-        corner_box = get_corners(
+        corner_box = get_cuboid_corners(
             [
                 position_3d[0],
                 position_3d[1],
@@ -483,25 +653,56 @@ class VisualizationUtils:
         line_set.lines = o3d.utility.Vector2iVector(line_indices)
         line_set.colors = o3d.utility.Vector3dVector(colors)
         # Display the bounding boxes:
-        renderer.scene.add_geometry("line_set_" + object_id, line_set, material)
+        renderer.scene.add_geometry("line_set_" + object_id, line_set, material["line"])
+        # TODO: color front site/face of 3D box in color (2 colored triangles)
+        # renderer.scene.remove_geometry("line_set_" + object_id)
+        return line_set
+
+    def visualize_track_history(self, track_history, category, use_two_colors, input_type, renderer, material,
+                                object_id):
+        # round all position values inside track_history to 3 decimal places
+        track_history = np.around(track_history, decimals=3)
+        # remove duplicates from track history but keep order
+        track_history = np.array(list(dict.fromkeys(map(tuple, track_history))))
+        if track_history.shape[0] < 2:
+            return
+        if use_two_colors and input_type == "detections":
+            color_red_rgb = (245, 44, 71)
+            # color_red_rgb_normalized = (color_red_rgb[0] / 255, color_red_rgb[1] / 255, color_red_rgb[2] / 255)
+            color_red_bgr_normalized = (color_red_rgb[2] / 255, color_red_rgb[1] / 255, color_red_rgb[0] / 255)
+            colors = [color_red_bgr_normalized for _ in range(len(track_history) - 1)]
+        elif use_two_colors and input_type == "labels":
+            color_green_rgb = (27, 250, 27)
+            # color_green_normalized = (color_green_rgb[0] / 255, color_green_rgb[1] / 255, color_green_rgb[2] / 255)
+            color_green_bgr_normalized = (color_green_rgb[2] / 255, color_green_rgb[1] / 255, color_green_rgb[0] / 255)
+            colors = [color_green_bgr_normalized for _ in range(len(track_history) - 1)]
+        else:
+            # change from rgb to bgr
+            colors = [
+                id_to_class_name_mapping[str(class_name_to_id_mapping[category])]["color_bgr_normalized"]
+                for _ in range(len(track_history) - 1)
+            ]
+
+        line_set = o3d.geometry.LineSet()
+        line_set.points = o3d.utility.Vector3dVector(track_history)
+        line_indices = [[i, i + 1] for i in range(len(track_history) - 1)]
+        line_set.lines = o3d.utility.Vector2iVector(line_indices)
+        line_set.colors = o3d.utility.Vector3dVector(colors)
+        renderer.scene.add_geometry("track_history_line_set_" + object_id, line_set, material["line"])
         # TODO: color front site/face of 3D box in color (2 colored triangles)
         # renderer.scene.remove_geometry("line_set_" + object_id)
         return line_set
 
     def visualize_boxes_3d(
             self,
+            pcd,
             file_path_point_cloud,
             file_path_labels,
             file_path_detections,
-            view,
             use_detections_in_base,
-            save_visualization_results,
-            show_visualization_results,
-            output_folder_path_visualization_results,
             renderer,
             material,
     ):
-        pcd = o3d.io.read_point_cloud(file_path_point_cloud)
         points = np.array(pcd.points)
         # remove rows having all zeroes
         points_filtered = points[~np.all(points == 0, axis=1)]
@@ -562,51 +763,8 @@ class VisualizationUtils:
             )
         object_id_list = label_object_id_list + detection_object_id_list
 
-        # vis.add_geometry(pcd)
-        renderer.scene.add_geometry("pcd", pcd, material)
-
-        """
-        Parameters:
-        fov:            vertical field of view
-        lookat_vector:  [center, eye, up]
-                         center describes the point the camera is looking at.
-                         eye describes the position of the camera.
-                         up describes the up direction of the camera.
-        """
-        if view == "bev":
-            center = np.array([12.779970, -3.404701, -3.659563])
-            eye = np.array([12.779970, -3.404701, 35])
-            up_vector = np.array([0, 0.1, 1])
-            lookat_vector = np.array([center, eye, up_vector])
-        elif view == "wide":
-            center = np.array([17.439, 4.825, -2.311])  # = lookat
-            eye = np.array([-0.945, 0.039, 0.325])  # = front
-            up_vector = np.array([0.325, -0.010, 0.946])  # up
-            lookat_vector = np.array([center, eye, up_vector])
-        elif view == "custom":
-            lookat_vector = np.array([[10.0, 2.0, 0.0], [0.0, 2.0, 17.0], [1.0, 0.0, 0.0]])
-        #  center, eye, up
-        renderer.setup_camera(120, lookat_vector[0], lookat_vector[1], lookat_vector[2])
-
-        if save_visualization_results:
-            image_o3d = renderer.render_to_image()
-            image_cv2 = np.array(image_o3d)
-            file_name = os.path.basename(file_path_point_cloud)
-            file_name_without_extension = os.path.splitext(file_name)[0]
-            output_file_path = os.path.join(output_folder_path_visualization_results, file_name.replace(".pcd", ".jpg"))
-            print("Saving visualization results to {}".format(output_file_path))
-            cv2.imwrite(output_file_path, image_cv2)
-
-        if show_visualization_results:
-            # center, eye, up
-            o3d.visualization.draw_geometries(
-                [pcd], zoom=0.3412, front=lookat_vector[0], lookat=lookat_vector[1], up=lookat_vector[2]
-            )
-
-        renderer.scene.remove_geometry("pcd")
-        # iterate all object id and remove geometry
-        for object_id in object_id_list:
-            renderer.scene.remove_geometry("line_set_" + object_id)
+        renderer.scene.add_geometry("pcd", pcd, material["point"])
+        return object_id_list
 
     def plot_banner(self, image, x_min, y_min, x_max, y_max, color, label):
         line_height = y_max - y_min
@@ -711,6 +869,21 @@ class VisualizationUtils:
                         material,
                         object_id,
                     )
+
+                    if "attributes" in label["object_data"]["cuboid"]:
+                        if "vec" in label["object_data"]["cuboid"]["attributes"]:
+                            attribute = VisualizationUtils.get_attribute_by_name(
+                                label["object_data"]["cuboid"]["attributes"]["vec"], "track_history"
+                            )
+                            if attribute is not None:
+                                track_history_list = attribute["val"]
+                                pos_history = np.array(track_history_list).reshape(-1, 3)
+                            else:
+                                pos_history = np.array([])
+
+                            if len(pos_history) > 1:
+                                self.visualize_track_history(pos_history, category, use_two_colors, input_type, renderer,
+                                                             material, object_id)
         else:
             for label in box_data["labels"]:
                 if "dimensions" in label:
@@ -791,7 +964,7 @@ class VisualizationUtils:
         #   |/       |/
         # (3)o--------o(2)
 
-    def draw_pseudo_3d_box(self, img, box_label, color, normalized=True):
+    def draw_pseudo_3d_box(self, img, box, color, use_normalized_keypoints=True):
         # NOTE: coordinates are normalized
         # (0): bottom_left_front
         # (1): bottom_left_back
@@ -811,7 +984,7 @@ class VisualizationUtils:
         #   |/       |/
         # (0)o--------o(3)
 
-        if normalized:
+        if use_normalized_keypoints:
             w = IMAGE_WIDTH
             h = IMAGE_HEIGHT
         else:
@@ -819,181 +992,191 @@ class VisualizationUtils:
             h = 1.0
 
         # draw bottom 4 lines
+        # bottom_left_front -> bottom_left_back
         self.draw_line(
             img,
             (
-                int(box_label["box3d_projected"]["bottom_left_front"][0] * w),
-                int(box_label["box3d_projected"]["bottom_left_front"][1] * h),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][0]["point2d"]["val"][0] * w),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][0]["point2d"]["val"][1] * h),
             ),
             (
-                int(box_label["box3d_projected"]["bottom_left_back"][0] * w),
-                int(box_label["box3d_projected"]["bottom_left_back"][1] * h),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][1]["point2d"]["val"][0] * w),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][1]["point2d"]["val"][1] * h),
             ),
             color,
         )
+        # bottom_left_back -> bottom_right_back
         self.draw_line(
             img,
             (
-                int(box_label["box3d_projected"]["bottom_left_back"][0] * w),
-                int(box_label["box3d_projected"]["bottom_left_back"][1] * h),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][1]["point2d"]["val"][0] * w),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][1]["point2d"]["val"][1] * h),
             ),
             (
-                int(box_label["box3d_projected"]["bottom_right_back"][0] * w),
-                int(box_label["box3d_projected"]["bottom_right_back"][1] * h),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][2]["point2d"]["val"][0] * w),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][2]["point2d"]["val"][1] * h),
             ),
             color,
         )
+        # bottom_right_back -> bottom_right_front
         self.draw_line(
             img,
             (
-                int(box_label["box3d_projected"]["bottom_right_back"][0] * w),
-                int(box_label["box3d_projected"]["bottom_right_back"][1] * h),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][2]["point2d"]["val"][0] * w),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][2]["point2d"]["val"][1] * h),
             ),
             (
-                int(box_label["box3d_projected"]["bottom_right_front"][0] * w),
-                int(box_label["box3d_projected"]["bottom_right_front"][1] * h),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][3]["point2d"]["val"][0] * w),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][3]["point2d"]["val"][1] * h),
             ),
             color,
         )
+        # bottom_right_front -> bottom_left_front
         self.draw_line(
             img,
             (
-                int(box_label["box3d_projected"]["bottom_right_front"][0] * w),
-                int(box_label["box3d_projected"]["bottom_right_front"][1] * h),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][3]["point2d"]["val"][0] * w),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][3]["point2d"]["val"][1] * h),
             ),
             (
-                int(box_label["box3d_projected"]["bottom_left_front"][0] * w),
-                int(box_label["box3d_projected"]["bottom_left_front"][1] * h),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][0]["point2d"]["val"][0] * w),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][0]["point2d"]["val"][1] * h),
             ),
             color,
         )
 
         # draw top 4 lines
+        # top_left_front -> top_left_back
         self.draw_line(
             img,
             (
-                int(box_label["box3d_projected"]["top_left_front"][0] * w),
-                int(box_label["box3d_projected"]["top_left_front"][1] * h),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][4]["point2d"]["val"][0] * w),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][4]["point2d"]["val"][1] * h),
             ),
             (
-                int(box_label["box3d_projected"]["top_left_back"][0] * w),
-                int(box_label["box3d_projected"]["top_left_back"][1] * h),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][5]["point2d"]["val"][0] * w),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][5]["point2d"]["val"][1] * h),
             ),
             color,
         )
+        # top_left_back -> top_right_back
         self.draw_line(
             img,
             (
-                int(box_label["box3d_projected"]["top_left_back"][0] * w),
-                int(box_label["box3d_projected"]["top_left_back"][1] * h),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][5]["point2d"]["val"][0] * w),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][5]["point2d"]["val"][1] * h),
             ),
             (
-                int(box_label["box3d_projected"]["top_right_back"][0] * w),
-                int(box_label["box3d_projected"]["top_right_back"][1] * h),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][6]["point2d"]["val"][0] * w),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][6]["point2d"]["val"][1] * h),
             ),
             color,
         )
+        # top_right_back -> top_right_front
         self.draw_line(
             img,
             (
-                int(box_label["box3d_projected"]["top_right_back"][0] * w),
-                int(box_label["box3d_projected"]["top_right_back"][1] * h),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][6]["point2d"]["val"][0] * w),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][6]["point2d"]["val"][1] * h),
             ),
             (
-                int(box_label["box3d_projected"]["top_right_front"][0] * w),
-                int(box_label["box3d_projected"]["top_right_front"][1] * h),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][7]["point2d"]["val"][0] * w),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][7]["point2d"]["val"][1] * h),
             ),
             color,
         )
+        # top_right_front -> top_left_front
         self.draw_line(
             img,
             (
-                int(box_label["box3d_projected"]["top_right_front"][0] * w),
-                int(box_label["box3d_projected"]["top_right_front"][1] * h),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][7]["point2d"]["val"][0] * w),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][7]["point2d"]["val"][1] * h),
             ),
             (
-                int(box_label["box3d_projected"]["top_left_front"][0] * w),
-                int(box_label["box3d_projected"]["top_left_front"][1] * h),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][4]["point2d"]["val"][0] * w),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][4]["point2d"]["val"][1] * h),
             ),
             color,
         )
 
         # draw 4 vertical lines
+        # bottom_left_front -> top_left_front
         self.draw_line(
             img,
             (
-                int(box_label["box3d_projected"]["bottom_left_front"][0] * w),
-                int(box_label["box3d_projected"]["bottom_left_front"][1] * h),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][0]["point2d"]["val"][0] * w),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][0]["point2d"]["val"][1] * h),
             ),
             (
-                int(box_label["box3d_projected"]["top_left_front"][0] * w),
-                int(box_label["box3d_projected"]["top_left_front"][1] * h),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][4]["point2d"]["val"][0] * w),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][4]["point2d"]["val"][1] * h),
             ),
             color,
         )
         self.draw_line(
             img,
             (
-                int(box_label["box3d_projected"]["bottom_left_back"][0] * w),
-                int(box_label["box3d_projected"]["bottom_left_back"][1] * h),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][1]["point2d"]["val"][0] * w),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][1]["point2d"]["val"][1] * h),
             ),
             (
-                int(box_label["box3d_projected"]["top_left_back"][0] * w),
-                int(box_label["box3d_projected"]["top_left_back"][1] * h),
-            ),
-            color,
-        )
-        self.draw_line(
-            img,
-            (
-                int(box_label["box3d_projected"]["bottom_right_back"][0] * w),
-                int(box_label["box3d_projected"]["bottom_right_back"][1] * h),
-            ),
-            (
-                int(box_label["box3d_projected"]["top_right_back"][0] * w),
-                int(box_label["box3d_projected"]["top_right_back"][1] * h),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][5]["point2d"]["val"][0] * w),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][5]["point2d"]["val"][1] * h),
             ),
             color,
         )
         self.draw_line(
             img,
             (
-                int(box_label["box3d_projected"]["bottom_right_front"][0] * w),
-                int(box_label["box3d_projected"]["bottom_right_front"][1] * h),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][2]["point2d"]["val"][0] * w),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][2]["point2d"]["val"][1] * h),
             ),
             (
-                int(box_label["box3d_projected"]["top_right_front"][0] * w),
-                int(box_label["box3d_projected"]["top_right_front"][1] * h),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][6]["point2d"]["val"][0] * w),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][6]["point2d"]["val"][1] * h),
             ),
             color,
         )
-
-        # draw front face
         self.draw_line(
             img,
             (
-                int(box_label["box3d_projected"]["top_right_back"][0] * w),
-                int(box_label["box3d_projected"]["top_right_back"][1] * h),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][3]["point2d"]["val"][0] * w),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][3]["point2d"]["val"][1] * h),
             ),
             (
-                int(box_label["box3d_projected"]["bottom_right_front"][0] * w),
-                int(box_label["box3d_projected"]["bottom_right_front"][1] * h),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][7]["point2d"]["val"][0] * w),
+                int(box["keypoints_2d"]["attributes"]["points2d"]["val"][7]["point2d"]["val"][1] * h),
             ),
             color,
         )
 
-        self.draw_line(
-            img,
-            (
-                int(box_label["box3d_projected"]["bottom_right_back"][0] * w),
-                int(box_label["box3d_projected"]["bottom_right_back"][1] * h),
-            ),
-            (
-                int(box_label["box3d_projected"]["top_right_front"][0] * w),
-                int(box_label["box3d_projected"]["top_right_front"][1] * h),
-            ),
-            color,
-        )
+        # draw front face marked with a cross (2 lines)
+        # top_right_back -> bottom_right_front
+        # self.draw_line(
+        #     img,
+        #     (
+        #         int(box["keypoints_2d"]["attributes"]["points2d"]["val"][0]["point2d"]["val"][0] * w),
+        #         int(box["keypoints_2d"]["attributes"]["points2d"]["val"][0]["point2d"]["val"][1] * h),
+        #     ),
+        #     (
+        #         int(box["keypoints_2d"]["attributes"]["points2d"]["val"][7]["point2d"]["val"][0] * w),
+        #         int(box["keypoints_2d"]["attributes"]["points2d"]["val"][7]["point2d"]["val"][1] * h),
+        #     ),
+        #     color,
+        # )
+        #
+        # self.draw_line(
+        #     img,
+        #     (
+        #         int(box["keypoints_2d"]["attributes"]["points2d"]["val"][4]["point2d"]["val"][0] * w),
+        #         int(box["keypoints_2d"]["attributes"]["points2d"]["val"][4]["point2d"]["val"][1] * h),
+        #     ),
+        #     (
+        #         int(box["keypoints_2d"]["attributes"]["points2d"]["val"][3]["point2d"]["val"][0] * w),
+        #         int(box["keypoints_2d"]["attributes"]["points2d"]["val"][3]["point2d"]["val"][1] * h),
+        #     ),
+        #     color,
+        # )
 
     def project_3d_position(self, position_3d):
         # project 3D Position into camera image
@@ -1077,6 +1260,38 @@ class VisualizationUtils:
                 return True
         return False
 
+    def transform_from_s110_base_to_s110_lidar_ouster_south(self, location: np.ndarray):
+        """Transform location from s110 base frame to s110 lidar ouster south frame."""
+        transformation_matrix_s110_lidar_ouster_south_to_s110_base = np.array([
+            [
+                0.21479485,
+                -0.9761028,
+                0.03296187,
+                -15.87257873
+            ],
+            [
+                0.97627128,
+                0.21553835,
+                0.02091894,
+                2.30019086
+            ],
+            [
+                -0.02752358,
+                0.02768645,
+                0.99923767,
+                7.48077521
+            ],
+            [
+                0.00000000,
+                0.00000000,
+                0.00000000,
+                1.00000000
+            ]
+        ], dtype=float)
+
+        location_transformed = transformation_matrix_s110_lidar_ouster_south_to_s110_base @ np.append(location, 1)
+        return location_transformed[:3]
+
     def plot_statistics(self, img, num_detections_lidar, num_detections_camera, num_detections_fused):
 
         # calculate height (in pixel) of gray rectangle
@@ -1146,3 +1361,82 @@ class VisualizationUtils:
                 (255, 255, 255),
                 1,
             )
+
+    def draw_line(self, img, start_point, end_point, color):
+        cv2.line(img, start_point, end_point, color, 2)
+
+    def draw_3d_box_by_keypoints(self, img, box_3d_label, color, image_width, image_height):
+        # draw bottom 4 lines
+        start_point = (int(box_3d_label["box3d_projected"]["bottom_left_front"][0] * image_width),
+                       int(box_3d_label["box3d_projected"]["bottom_left_front"][1] * image_height))
+        end_point = (int(box_3d_label["box3d_projected"]["bottom_left_back"][0] * image_width),
+                     int(box_3d_label["box3d_projected"]["bottom_left_back"][1] * image_height))
+        self.draw_line(img, start_point, end_point, color)
+
+        start_point = (int(box_3d_label["box3d_projected"]["bottom_left_back"][0] * image_width),
+                       int(box_3d_label["box3d_projected"]["bottom_left_back"][1] * image_height))
+        end_point = (int(box_3d_label["box3d_projected"]["bottom_right_back"][0] * image_width),
+                     int(box_3d_label["box3d_projected"]["bottom_right_back"][1] * image_height))
+        self.draw_line(img, start_point, end_point, color)
+
+        start_point = (int(box_3d_label["box3d_projected"]["bottom_right_back"][0] * image_width),
+                       int(box_3d_label["box3d_projected"]["bottom_right_back"][1] * image_height))
+        end_point = (int(box_3d_label["box3d_projected"]["bottom_right_front"][0] * image_width),
+                     int(box_3d_label["box3d_projected"]["bottom_right_front"][1] * image_height))
+        self.draw_line(img, start_point, end_point, color)
+
+        start_point = (int(box_3d_label["box3d_projected"]["bottom_right_front"][0] * image_width),
+                       int(box_3d_label["box3d_projected"]["bottom_right_front"][1] * image_height))
+        end_point = (int(box_3d_label["box3d_projected"]["bottom_left_front"][0] * image_width),
+                     int(box_3d_label["box3d_projected"]["bottom_left_front"][1] * image_height))
+        self.draw_line(img, start_point, end_point, color)
+
+        # draw top 4 lines
+        start_point = (int(box_3d_label["box3d_projected"]["top_left_front"][0] * image_width),
+                       int(box_3d_label["box3d_projected"]["top_left_front"][1] * image_height))
+        end_point = (int(box_3d_label["box3d_projected"]["top_left_back"][0] * image_width),
+                     int(box_3d_label["box3d_projected"]["top_left_back"][1] * image_height))
+        self.draw_line(img, start_point, end_point, color)
+
+        start_point = (int(box_3d_label["box3d_projected"]["top_left_back"][0] * image_width),
+                       int(box_3d_label["box3d_projected"]["top_left_back"][1] * image_height))
+        end_point = (int(box_3d_label["box3d_projected"]["top_right_back"][0] * image_width),
+                     int(box_3d_label["box3d_projected"]["top_right_back"][1] * image_height))
+        self.draw_line(img, start_point, end_point, color)
+
+        start_point = (int(box_3d_label["box3d_projected"]["top_right_back"][0] * image_width),
+                       int(box_3d_label["box3d_projected"]["top_right_back"][1] * image_height))
+        end_point = (int(box_3d_label["box3d_projected"]["top_right_front"][0] * image_width),
+                     int(box_3d_label["box3d_projected"]["top_right_front"][1] * image_height))
+        self.draw_line(img, start_point, end_point, color)
+
+        start_point = (int(box_3d_label["box3d_projected"]["top_right_front"][0] * image_width),
+                       int(box_3d_label["box3d_projected"]["top_right_front"][1] * image_height))
+        end_point = (int(box_3d_label["box3d_projected"]["top_left_front"][0] * image_width),
+                     int(box_3d_label["box3d_projected"]["top_left_front"][1] * image_height))
+        self.draw_line(img, start_point, end_point, color)
+
+        # draw 4 vertical lines
+        start_point = (int(box_3d_label["box3d_projected"]["bottom_left_front"][0] * image_width),
+                       int(box_3d_label["box3d_projected"]["bottom_left_front"][1] * image_height))
+        end_point = (int(box_3d_label["box3d_projected"]["top_left_front"][0] * image_width),
+                     int(box_3d_label["box3d_projected"]["top_left_front"][1] * image_height))
+        self.draw_line(img, start_point, end_point, color)
+
+        start_point = (int(box_3d_label["box3d_projected"]["bottom_left_back"][0] * image_width),
+                       int(box_3d_label["box3d_projected"]["bottom_left_back"][1] * image_height))
+        end_point = (int(box_3d_label["box3d_projected"]["top_left_back"][0] * image_width),
+                     int(box_3d_label["box3d_projected"]["top_left_back"][1] * image_height))
+        self.draw_line(img, start_point, end_point, color)
+
+        start_point = (int(box_3d_label["box3d_projected"]["bottom_right_back"][0] * image_width),
+                       int(box_3d_label["box3d_projected"]["bottom_right_back"][1] * image_height))
+        end_point = (int(box_3d_label["box3d_projected"]["top_right_back"][0] * image_width),
+                     int(box_3d_label["box3d_projected"]["top_right_back"][1] * image_height))
+        self.draw_line(img, start_point, end_point, color)
+
+        start_point = (int(box_3d_label["box3d_projected"]["bottom_right_front"][0] * image_width),
+                       int(box_3d_label["box3d_projected"]["bottom_right_front"][1] * image_height))
+        end_point = (int(box_3d_label["box3d_projected"]["top_right_front"][0] * image_width),
+                     int(box_3d_label["box3d_projected"]["top_right_front"][1] * image_height))
+        self.draw_line(img, start_point, end_point, color)

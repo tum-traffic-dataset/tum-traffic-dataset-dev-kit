@@ -14,12 +14,12 @@ import argparse
 #                                                 --output_folder_path_images <OUTPUT_FOLDER_PATH_IMAGES>
 # Example:
 #           python a9-dev-kit/undistort_images.py --input_folder_path_images a9_dataset/r00_s00/_images/s040_camera_basler_north_16mm \
-#                                                 --file_path_calibration_parameter a9_dataset/r00_s00/_calibration/s40_camera_basler_north_16mm.json \
+#                                                 --file_path_calibration_parameter a9_dataset/r00_s00/_calibration/s040_camera_basler_north_16mm.json \
 #                                                 --output_folder_path_images a9_dataset/r00_s00/_images_undistorted
 
 
 def load_calibration_parameters(file_path_calibration_parameter):
-    print("Loading camera parameters from file:")
+    print("Loading camera parameters from file: ", file_path_calibration_parameter)
     return json.load(
         open(
             file_path_calibration_parameter,
@@ -59,8 +59,8 @@ if __name__ == "__main__":
     argparser.add_argument(
         "-l",
         "--file_path_calibration_parameter",
-        default="a9_dataset/r00_s00/_calibration/s40_camera_basler_north_16mm.json",
-        help="File path to calibration parameter file (json). Default: a9_dataset/r01_s01/_calibration/s40_camera_basler_north_16mm.json",
+        default="a9_dataset/r00_s00/_calibration/s040_camera_basler_north_16mm.json",
+        help="File path to calibration parameter file (json). Default: a9_dataset/r01_s01/_calibration/s040_camera_basler_north_16mm.json",
     )
     argparser.add_argument(
         "-o",
@@ -82,7 +82,8 @@ if __name__ == "__main__":
     if not os.path.exists(output_folder_path_images):
         os.makedirs(output_folder_path_images)
 
-    if "8mm" in input_folder_path_images or "50mm" in input_folder_path_images:
+    file_name_calib_params = file_path_calibration_parameter.split("/")[-1]
+    if "8mm" in file_name_calib_params or "50mm" in file_name_calib_params:
         use_optimal_intrinsic_camera_matrix = True
     else:
         use_optimal_intrinsic_camera_matrix = False

@@ -4,6 +4,7 @@ from pathlib import Path
 import sys
 import os
 import json
+from scipy.spatial.transform import Rotation as R
 
 PERCEPTION_SHARED_DIRECTORY = Path(__file__).absolute().parent
 
@@ -22,13 +23,14 @@ class Perspective:
     """
 
     def __init__(
-        self,
-        rotation_matrix: np.ndarray,
-        translation: np.ndarray,
-        intrinsic_matrix: np.ndarray,
-        image_shape: Tuple[int, int],
-        projection_from_lidar_south: Optional[np.ndarray] = None,
-        projection_from_lidar_north: Optional[np.ndarray] = None,
+            self,
+            rotation_matrix: np.ndarray,
+            translation: np.ndarray,
+            intrinsic_matrix: np.ndarray,
+            image_shape: Tuple[int, int],
+            projection_from_lidar_south: Optional[np.ndarray] = None,
+            projection_from_lidar_north: Optional[np.ndarray] = None,
+            transformation_matrix_s110_lidar_ouster_south_to_s110_base: Optional[np.ndarray] = None,
     ):
         assert rotation_matrix.shape == (3, 3)
         assert translation.shape == (3, 1)
@@ -38,6 +40,7 @@ class Perspective:
         self.image_shape = image_shape
         self.projection_from_lidar_south = projection_from_lidar_south
         self.projection_from_lidar_north = projection_from_lidar_north
+        self.transformation_matrix_s110_liar_ouster_south_to_s110_base = transformation_matrix_s110_lidar_ouster_south_to_s110_base
         self.initialize_matrices()
 
     def initialize_matrices(self):
@@ -92,6 +95,19 @@ class Perspective:
         image_points = transformed_points[:2] / transformed_points[2]
         return image_points
 
+    def transform_from_s110_base_to_s110_lidar_ouster_south(self, location: np.ndarray, roll: float = 0.0,
+                                                            pitch: float = 0.0, yaw: float = 0.0):
+        """Transform location from s110 base frame to s110 lidar ouster south frame."""
+        assert self.transformation_matrix_s110_liar_ouster_south_to_s110_base is not None
+        box_pose = np.eye(4)
+        box_pose[0:3, 3] = location[:, 0]
+        box_pose[0:3, 0:3] = R.from_euler("xyz", [roll, pitch, yaw], degrees=False).as_matrix()
+        box_pose = np.linalg.inv(self.transformation_matrix_s110_liar_ouster_south_to_s110_base) @ box_pose
+        location_transformed = box_pose[0:3, 3]
+        # make location_transformed 3x1 instead of 3,
+        location_transformed = np.expand_dims(location_transformed, axis=1)
+        return location_transformed, R.from_matrix(box_pose[0:3, 0:3]).as_euler("xyz", degrees=False)
+
 
 def parse_perspective(perspective_file_path: str) -> Optional[Perspective]:
     """Parse single perspective from JSON file."""
@@ -105,11 +121,12 @@ def parse_perspective(perspective_file_path: str) -> Optional[Perspective]:
     keys = {"rotation_matrix", "translation", "intrinsic_matrix", "extrinsic_matrix"}
 
     # Second type of calibrated json file (used at the S110 intersection)
-    key2 = {"rotation_matrix", "translation_matrix", "intrinsic_matrix", "projection_matrix"}
+    key2 = {"rotation_matrix", "translation_matrix", "calibrated_intrinsic_camera_matrix", "projection_matrix"}
 
     # Third type of calibrated json file (using two different projection matrices)
     key3 = {"intrinsic", "R", "t", "projection_matrix", "image_width", "image_height"}
 
+    # Fourth type of calibrated json file (keys are used in lidar calibration files)
     key4 = {
         "projection_matrix_into_s110_camera_basler_south1_8mm",
         "projection_matrix_into_s110_camera_basler_south2_8mm",
@@ -128,6 +145,7 @@ def parse_perspective(perspective_file_path: str) -> Optional[Perspective]:
 
     intrinsic_matrix = None
     image_shape = None
+    transformation_matrix_s110_liar_ouster_south_to_s110_base = None
     if keys.issubset(data):
         rotation_matrix = np.array(data["rotation_matrix"]).T
         translation = np.array(data["extrinsic_matrix"])[:, -1:]
@@ -138,9 +156,15 @@ def parse_perspective(perspective_file_path: str) -> Optional[Perspective]:
     elif key2.issubset(data):
 
         rotation_matrix = np.array(data["rotation_matrix"])
-        intrinsic_matrix = np.array(data["intrinsic_matrix"])
+        intrinsic_matrix = np.array(data["calibrated_intrinsic_camera_matrix"])[0:3, 0:3]
         projection_matrix = np.array(data["projection_matrix"])
         translation_matrix = np.array(data["translation_matrix"])[:, np.newaxis]  # convert to column vector
+        if "transformation_matrix_s110_lidar_ouster_south_to_s110_base" in data:
+            transformation_matrix_s110_liar_ouster_south_to_s110_base = np.array(
+                data["transformation_matrix_s110_lidar_ouster_south_to_s110_base"]
+            )
+        else:
+            transformation_matrix_s110_liar_ouster_south_to_s110_base = np.eye(4)
 
         image_shape, proj_from_lidar_south, proj_from_lidar_north, translation = get_original_translation(
             data,
@@ -177,19 +201,20 @@ def parse_perspective(perspective_file_path: str) -> Optional[Perspective]:
         sys.exit()
 
     perspective = Perspective(
-        rotation_matrix, translation, intrinsic_matrix, image_shape, proj_from_lidar_south, proj_from_lidar_north
+        rotation_matrix, translation, intrinsic_matrix, image_shape, proj_from_lidar_south, proj_from_lidar_north,
+        transformation_matrix_s110_liar_ouster_south_to_s110_base
     )
     return perspective
 
 
 def get_original_translation(
-    data,
-    intrinsic_matrix,
-    proj_from_lidar_south,
-    proj_from_lidar_north,
-    projection_matrix,
-    rotation_matrix,
-    translation_matrix,
+        data,
+        intrinsic_matrix,
+        proj_from_lidar_south,
+        proj_from_lidar_north,
+        projection_matrix,
+        rotation_matrix,
+        translation_matrix,
 ):
     extrinsic_matrix = np.hstack((rotation_matrix, translation_matrix))
     # TODO: remove duplicate projection matrix from config file

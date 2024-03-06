@@ -42,7 +42,28 @@ def convert_file(input_folder_path_labels, output_folder_path_labels, filename, 
         for frame_id, frame_obj in data["openlabel"]["frames"].items():
             for object_id, object_json in frame_obj["objects"].items():
                 object_class = object_json["object_data"]["type"].upper()
-                bbox = object_json["object_data"]["bbox"][0]["val"]  # x_center, y_center, width, height
+                if "bbox" in object_json["object_data"]:
+                    bbox = object_json["object_data"]["bbox"][0]["val"]  # x_center, y_center, width, height
+                else:
+                    # calculate bbox from 2D keypoints
+                    keypoints = object_json["object_data"]["keypoints_2d"]["attributes"]["points2d"]["val"]
+                    bbox = [0, 0, 0, 0]
+                    # iterate over 8 keypoints
+                    keypoints_xy = []
+                    for keypoint in keypoints:
+                        x = keypoint["point2d"]["val"][0]
+                        y = keypoint["point2d"]["val"][1]
+                        keypoints_xy.append([x, y])
+                    # calculate bbox
+                    x_min = np.amin(np.array(keypoints_xy)[:, 0])
+                    x_max = np.amax(np.array(keypoints_xy)[:, 0])
+                    y_min = np.amin(np.array(keypoints_xy)[:, 1])
+                    y_max = np.amax(np.array(keypoints_xy)[:, 1])
+                    bbox[0] = int((x_min + x_max) / 2.0)
+                    bbox[1] = int((y_min + y_max) / 2.0)
+                    bbox[2] = int(x_max - x_min)
+                    bbox[3] = int(y_max - y_min)
+
                 x_center = bbox[0]
                 y_center = bbox[1]
                 width = bbox[2]
@@ -121,16 +142,16 @@ def convert_file(input_folder_path_labels, output_folder_path_labels, filename, 
 
 def write_line(output_folder_path_labels, filename, object_id, x_center, y_center, height, width):
     new_line = (
-        str(object_id)
-        + " "
-        + str(x_center / 1920)
-        + " "
-        + str(y_center / 1200)
-        + " "
-        + str(width / 1920)
-        + " "
-        + str(height / 1200)
-        + "\n"
+            str(object_id)
+            + " "
+            + str(x_center / 1920)
+            + " "
+            + str(y_center / 1200)
+            + " "
+            + str(width / 1920)
+            + " "
+            + str(height / 1200)
+            + "\n"
     )
     with open(os.path.join(output_folder_path_labels, filename + ".txt"), "a") as output_file:
         output_file.write(new_line)

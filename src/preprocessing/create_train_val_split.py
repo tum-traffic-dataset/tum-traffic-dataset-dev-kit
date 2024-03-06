@@ -10,7 +10,7 @@ from tqdm import tqdm
 # The final train/val split is stored in a new folder:  <INPUT_FOLDER_PATH_DATASET>+ "_split"
 #
 # Usage: python src/preprocessing/create_train_val_split.py --input_folder_path_dataset <INPUT_FOLDER_PATH_DATASET> --input_folder_path_data_split_root <INPUT_FOLDER_PATH_DATA_SPLIT_ROOT>
-# Example: python src/preprocessing/create_train_val_split.py --input_folder_path_dataset /home/providentia/datasets/r02_sequences --input_folder_path_data_split_root /home/providentia/a9-dataset-dev-kit/data_split
+# Example: python src/preprocessing/create_train_val_split.py --input_folder_path_dataset /home/user/datasets/r02_sequences --input_folder_path_data_split_root /home/user/a9-dataset-dev-kit/data_split
 
 def copy_to_output(
         file_name,

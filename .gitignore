@@ -160,3 +160,4 @@ training.data
 test.data
 
 data_split/test_full
+internal/src/statistics/plots/

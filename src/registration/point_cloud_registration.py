@@ -17,7 +17,7 @@ import open3d as o3d
 # Register source point cloud to target point cloud and find the optimal transformation among them.
 # The final result is stored in the target coordinate system.
 
-# Example: python point_cloud_registration_two_pcd_inputs.py --folder_path_point_cloud_source /home/providentia/Downloads/test_frames/lidar_vehicle_point_cloud/ --folder_path_point_cloud_target /home/providentia/Downloads/test_frames/lidar_infrastructure_point_cloud/ --initial_voxel_size 2 --continuous_voxel_size 2 --output_folder_path_registered_point_clouds /home/providentia/Downloads/test_frames/registered_point_clouds/ --save_registered_point_clouds
+# Example: python point_cloud_registration.py --folder_path_point_cloud_source /home/user/Downloads/test_frames/lidar_vehicle_point_cloud/ --folder_path_point_cloud_target /home/user/Downloads/test_frames/lidar_infrastructure_point_cloud/ --initial_voxel_size 2 --continuous_voxel_size 2 --output_folder_path_registered_point_clouds /home/user/Downloads/test_frames/registered_point_clouds/ --save_registered_point_clouds
 # NOTE: set the initial transformation matrix in line 195!
 
 
