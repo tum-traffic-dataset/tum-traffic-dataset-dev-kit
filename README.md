@@ -227,7 +227,7 @@ python tum-traffic-dataset-dev-kit/src/visualization/visualize_image_with_3d_box
                                                                                       --labels_coordinate_system_origin [s110_base,s110_lidar_ouster_south]
 ```
 
-| Visualization south2 in camera:`--viz_mode box3d,point_cloud` | Visualization south1 camera: `--vis_mode box2d,box3d,mask,point_cloud` |
+| Visualization south2 in camera:`--viz_mode box3d,point_cloud` | Visualization south1 camera: `--vis_mode box2d,box3d,mask,track_history` |
 |---------------------------------------------------------------|------------------------------------------------------------------------|
 <p float="left">
   <img src="img/1651673053_741453105_s110_camera_basler_south2_8mm.jpg" width="49%" />
