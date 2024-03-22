@@ -100,7 +100,7 @@
       1.0
     ]
   ],
-  "optimal_intrinsic_camera_matrix_for_lidar_projection": [
+  "calibrated_intrinsic_camera_matrix": [
     [
       2726.55,
       0,

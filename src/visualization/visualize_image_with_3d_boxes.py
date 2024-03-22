@@ -24,7 +24,7 @@ from scipy.spatial.transform import Rotation as R
 
 
 # Example:
-# python visualize_image_with_lidar_labels_all_frames.py --input_folder_path_images images --input_folder_path_point_clouds point_clouds --input_folder_path_labels labels --camera_id s110_camera_basler_south1_8mm --lidar_id s110_lidar_ouster_south --use_detection_boxes_in_s110_base  --viz_mode [box2d,box3d,point_cloud,track_history] --output_folder_path_visualization visualization
+# python visualize_image_with_3d_boxes.py --input_folder_path_images images --input_folder_path_point_clouds point_clouds --input_folder_path_labels labels --camera_id s110_camera_basler_south1_8mm --lidar_id s110_lidar_ouster_south --use_detection_boxes_in_s110_base  --viz_mode [box2d,box3d,point_cloud,track_history] --output_folder_path_visualization visualization --file_path_calibration_data calib/vehicle_camera_basler_16mm.json
 
 
 def process_boxes(img, box_data, use_two_colors, input_type, camera_id, lidar_id, perspective,
