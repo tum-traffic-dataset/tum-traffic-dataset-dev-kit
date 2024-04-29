@@ -28,7 +28,7 @@ from scipy.spatial.transform import Rotation as R
 
 
 def process_boxes(img, box_data, use_two_colors, input_type, camera_id, lidar_id, perspective,
-                  boxes_coordinate_system_origin, transformation_matrix_vehicle_lidar_to_infra_lidar):
+                  boxes_coordinate_system_origin, transformation_matrix_vehicle_lidar_to_infra_lidar,dataset_release):
     """
     :param img:                     Input image
     :param box_data:                JSON data of the boxes
@@ -112,6 +112,9 @@ def process_boxes(img, box_data, use_two_colors, input_type, camera_id, lidar_id
                 if "cuboid" in box["object_data"]:
                     cuboid = box["object_data"]["cuboid"]["val"]
                     location = np.array([[cuboid[0]], [cuboid[1]], [cuboid[2]]])
+                    if dataset_release == "r00":
+                        # add half of the height to the z position
+                        location[2] += cuboid[9] / 2
                     quaternion = [cuboid[3], cuboid[4], cuboid[5], cuboid[6]]
                     roll, pitch, yaw = R.from_quat(quaternion).as_euler("xyz", degrees=False)
                     pos_history = np.array([])
@@ -239,7 +242,7 @@ def process_boxes(img, box_data, use_two_colors, input_type, camera_id, lidar_id
                     if "box3d" in viz_mode:
                         points_2d = utils.draw_3d_box(img, box, color_bgr, camera_id, lidar_id,
                                                       boxes_coordinate_system_origin,
-                                                      perspective)
+                                                      perspective, dataset_release)
                         # plot banner
                         if "box2d" not in viz_mode and points_2d is not None:
                             if points_2d.shape[0] == 8 and points_2d.shape[1] == 2:
@@ -330,9 +333,13 @@ def get_color(box_idx, category, input_type, sensor_id, use_two_colors):
         color_rgb = (27, 250, 27)  # green
     else:
         if viz_color_mode == "by_category":
-            color_rgb = id_to_class_name_mapping[str(class_name_to_id_mapping[category])][
-                "color_rgb"
-            ]
+            # TODO: remove workaround after fixing labels
+            if category != "SPECIAL_VEHICLE":
+                color_rgb = id_to_class_name_mapping[str(class_name_to_id_mapping[category])][
+                    "color_rgb"
+                ]
+            else:
+                color_rgb = (102, 107, 250)
         elif viz_color_mode == "by_sensor_type":
             # TODO: parse sensor_id from attribute
             # sensor_id = "s110_lidar_ouster_south"
@@ -468,7 +475,7 @@ if __name__ == "__main__":
     argparser.add_argument(
         "--labels_coordinate_system_origin",
         default="s110_lidar_ouster_south",
-        help="Origin coordinate system of label boxes. Possible values are: [s110_base, s110_lidar_ouster_south, vehicle_lidar_robosense]. Default: s110_lidar_ouster_south",
+        help="Origin coordinate system of label boxes. Possible values are: [common_road, s110_base, s110_lidar_ouster_south, vehicle_lidar_robosense]. Default: s110_lidar_ouster_south",
     )
     argparser.add_argument(
         "--detections_coordinate_system_origin",
@@ -487,13 +494,18 @@ if __name__ == "__main__":
     )
     argparser.add_argument(
         "--viz_color_mode",
-        default="by_class",
-        help="Visualization color mode. Available modes are: [by_class, by_physical_color, by_sensor_type]",
+        default="by_category",
+        help="Visualization color mode. Available modes are: [by_category, by_physical_color, by_sensor_type]",
     )
     argparser.add_argument(
         "--output_folder_path_visualization",
         default="visualization",
         help="Output folder path to save visualization result to disk.",
+    )
+    argparser.add_argument(
+        "--dataset_release",
+        default="r00",
+        help="Dataset release version. Default: r00. Possible values: [r00, r01, r02, r03, r04]",
     )
     args = argparser.parse_args()
 
@@ -509,6 +521,7 @@ if __name__ == "__main__":
     viz_mode = args.viz_mode
     viz_color_mode = args.viz_color_mode
     output_folder_path_visualization = args.output_folder_path_visualization
+    dataset_release = args.dataset_release
 
     if not os.path.exists(output_folder_path_visualization):
         Path(output_folder_path_visualization).mkdir(parents=True)
@@ -646,6 +659,7 @@ if __name__ == "__main__":
                     perspective=camera_perspectives[camera_id],
                     boxes_coordinate_system_origin=labels_coordinate_system_origin,
                     transformation_matrix_vehicle_lidar_to_infra_lidar=transformation_matrix_vehicle_lidar_to_infra_lidar,
+                    dataset_release=dataset_release,
                 )
             if detection_file_path != "":
                 if "track_history" in viz_mode:
@@ -666,6 +680,7 @@ if __name__ == "__main__":
                     perspective=camera_perspectives[camera_id],
                     boxes_coordinate_system_origin=detections_coordinate_system_origin,
                     transformation_matrix_vehicle_lidar_to_infra_lidar=transformation_matrix_vehicle_lidar_to_infra_lidar,
+                    dataset_release=dataset_release,
                 )
         if output_folder_path_visualization:
             cv2.imwrite(

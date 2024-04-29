@@ -57,27 +57,9 @@ class VisualizationUtils:
         projection_matrix = None
         if camera_id == "s040_camera_basler_north_16mm":
             projection_matrix = np.array(
-                [
-                    [
-                        -416.844941,
-                        2892.59647,
-                        -247.06652,
-                        235051.435
-                    ],
-                    [
-                        28.8849541,
-                        -53.8999902,
-                        -2844.3092,
-                        8880.6336
-                    ],
-                    [
-                        -0.96293102,
-                        0.15630576,
-                        -0.2198462,
-                        443.097864
-                    ]
-                ]
-            )
+                [[-4.19951586e+02, 2.89201626e+03, -2.48593165e+02, 2.36281908e+05],
+                 [3.38518055e+01, -5.46540594e+01, -2.84424001e+03, 7.74758133e+03],
+                 [-9.62740980e-01, 1.55067950e-01, -2.21548500e-01, 4.43080190e+02]])
         elif camera_id == "s040_camera_basler_north_50mm":
             projection_matrix = np.array([
                 [
@@ -427,11 +409,37 @@ class VisualizationUtils:
 
     def project_3d_box_to_2d(self, points_3d, camera_id, lidar_id, boxes_coordinate_system_origin):
         points_3d = np.transpose(points_3d)
-        points_3d = np.append(points_3d, np.ones((1, points_3d.shape[1])), axis=0)
 
-        # project points to 2D
-        projection_matrix = self.get_projection_matrix(camera_id, lidar_id, boxes_coordinate_system_origin)
-        points = np.matmul(projection_matrix, points_3d[:4, :])
+        if boxes_coordinate_system_origin == "s040_camera_basler_north_16mm":
+            # just multiply with intrinsic because the objects are already in camera space
+            intrinsic_matrix = np.array([[2.78886072e+03, 0.00000000e+00, 9.07839058e+02],
+                                         [0.00000000e+00, 2.78331261e+03, 5.89071478e+02],
+                                         [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]], dtype=float)
+            # multiply with intrinsic matrix
+            points = np.matmul(intrinsic_matrix, points_3d[:3, :])
+        elif boxes_coordinate_system_origin == "s040_camera_basler_north_50mm":
+            intrinsic_matrix = np.array([[9.02348282e+03, 0.00000000e+00, 1.22231430e+03],
+                                         [0.00000000e+00, 9.01450436e+03, 5.57541182e+02],
+                                         [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]], dtype=float)
+            # multiply with intrinsic matrix
+            points = np.matmul(intrinsic_matrix, points_3d[:3, :])
+        elif boxes_coordinate_system_origin == "s050_camera_basler_south_16mm":
+            intrinsic_matrix = np.array([[2.82046004e+03, 0.00000000e+00, 9.60667182e+02],
+                                         [0.00000000e+00, 2.81622151e+03, 5.25863289e+02],
+                                         [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]], dtype=float)
+            # multiply with intrinsic matrix
+            points = np.matmul(intrinsic_matrix, points_3d[:3, :])
+        elif boxes_coordinate_system_origin == "s050_camera_basler_south_50mm":
+            intrinsic_matrix = np.array([[8.87857970e+03, 0.00000000e+00, 5.84217565e+02],
+                                         [0.00000000e+00, 8.81172402e+03, 4.65520403e+02],
+                                         [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]], dtype=float)
+            # multiply with intrinsic matrix
+            points = np.matmul(intrinsic_matrix, points_3d[:3, :])
+        else:
+            points_3d = np.append(points_3d, np.ones((1, points_3d.shape[1])), axis=0)
+            # project points to 2D
+            projection_matrix = self.get_projection_matrix(camera_id, lidar_id, boxes_coordinate_system_origin)
+            points = np.matmul(projection_matrix, points_3d[:4, :])
         # filter out points behind camera
         points = points[:, points[2] > 0]
         # return None if no points are visible
@@ -522,7 +530,8 @@ class VisualizationUtils:
                     image, text, projected_center, cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255, 255, 255), 1, cv2.LINE_AA
                 )
 
-    def draw_3d_box(self, img, box_label, color, camera_id, lidar_id, boxes_coordinate_system_origin, perspective):
+    def draw_3d_box(self, img, box_label, color, camera_id, lidar_id, boxes_coordinate_system_origin, perspective,
+                    dataset_release):
         if boxes_coordinate_system_origin == "s110_base" and lidar_id != "vehicle_lidar_robosense":
             l = float(box_label["object_data"]["cuboid"]["val"][7])
             w = float(box_label["object_data"]["cuboid"]["val"][8])
@@ -539,6 +548,9 @@ class VisualizationUtils:
                     [float(box_label["object_data"]["cuboid"]["val"][2])],
                 ]
             )
+            if dataset_release == "r00":
+                # add half of the height to the z coordinate
+                location[2] += h / 2
             yaw = radians(yaw)
             bottom_corners = np.array(
                 [
@@ -882,7 +894,8 @@ class VisualizationUtils:
                                 pos_history = np.array([])
 
                             if len(pos_history) > 1:
-                                self.visualize_track_history(pos_history, category, use_two_colors, input_type, renderer,
+                                self.visualize_track_history(pos_history, category, use_two_colors, input_type,
+                                                             renderer,
                                                              material, object_id)
         else:
             for label in box_data["labels"]:
