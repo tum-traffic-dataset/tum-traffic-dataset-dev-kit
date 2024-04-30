@@ -2,7 +2,7 @@ import open3d as o3d
 import numpy as np
 import os
 
-from pypcd import pypcd
+# from pypcd import pypcd
 import argparse
 
 from src.utils.point_cloud_registration_utils import read_point_cloud_with_intensity, write_point_cloud_with_intensity

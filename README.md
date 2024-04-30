@@ -225,9 +225,10 @@ python tum-traffic-dataset-dev-kit/src/visualization/visualize_image_with_3d_box
                                                                                       --output_folder_path_visualization <OUTPUT_FOLDER_PATH> \
                                                                                       --detections_coordinate_system_origin [s110_base,s110_lidar_ouster_south] \
                                                                                       --labels_coordinate_system_origin [s110_base,s110_lidar_ouster_south]
+                                                                                      --file_path_calibration_data <CALIB_FILE_PATH>
 ```
 
-| Visualization south2 in camera:`--viz_mode box3d,point_cloud` | Visualization south1 camera: `--vis_mode box2d,box3d,mask,track_history` |
+| Visualization south2 in camera:`--viz_mode box3d,point_cloud` | Visualization south1 camera: `--viz_mode box2d,box3d,mask,track_history` |
 |---------------------------------------------------------------|------------------------------------------------------------------------|
 <p float="left">
   <img src="img/1651673053_741453105_s110_camera_basler_south2_8mm.jpg" width="49%" />
@@ -247,7 +248,7 @@ python tum-traffic-dataset-dev-kit/src/visualization/visualize_point_cloud_with_
 
 Bird's Eye View            |  Side View
 :-------------------------:|:-------------------------:
-![](img/1688626050_947334296_s110_lidar_ouster_south_and_vehicle_lidar_robosense_registered_point_cloud_bev.jpg)  |  ![](img/1688626050_947334296_s110_lidar_ouster_south_and_vehicle_lidar_robosense_registered_point_cloud_custom_view.jpg)
+![bev](img/1688626050_947334296_s110_lidar_ouster_south_and_vehicle_lidar_robosense_registered_point_cloud_bev.jpg)  |  ![side_view](img/1688626050_947334296_s110_lidar_ouster_south_and_vehicle_lidar_robosense_registered_point_cloud_custom_view.jpg)
 
 ## ✴️️ Data Split
 
@@ -290,14 +291,14 @@ In addition, a data converter/exporter enables you to convert the labels from Op
 ### OpenLABEL to YOLO
 The following script converts the OpenLABEL labels into YOLO labels:
 ```
-python tum-traffic-dataset-dev-kit/src/converter/conversion_openlabel_to_yolo.py --input_folder_path_labels <INPUT_FOLDER_PATH_LABELS> \
+python tum-traffic-dataset-dev-kit/src/label_conversion/conversion_openlabel_to_yolo.py --input_folder_path_labels <INPUT_FOLDER_PATH_LABELS> \
                                                                                  --output_folder_path_labels <OUTPUT_FOLDER_PATH_LABELS>
 ```
 
 ### OpenLABEL to KITTI
 The following script converts the OpenLABEL labels into KITTI labels:
 ```
-python tum-traffic-dataset-dev-kit/src/converter/conversion_openlabel_to_kitti.py --root-dir <DATASET_ROOT_DIR> \
+python tum-traffic-dataset-dev-kit/src/label_conversion/conversion_openlabel_to_kitti.py --root-dir <DATASET_ROOT_DIR> \
                                                                                   --out-dir <OUTPUT_FOLDER_PATH_LABELS> \
                                                                                   --file-name-format [name,num]
 ```
@@ -305,7 +306,7 @@ python tum-traffic-dataset-dev-kit/src/converter/conversion_openlabel_to_kitti.p
 ### OpenLABEL to nuScenes
 The following script converts the OpenLABEL labels into nuScenes labels:
 ```
-python tum-traffic-dataset-dev-kit/src/converter/conversion_openlabel_to_nuscenes.py --root-path <DATASET_ROOT_DIR> \
+python tum-traffic-dataset-dev-kit/src/label_conversion/conversion_openlabel_to_nuscenes.py --root-path <DATASET_ROOT_DIR> \
                                                                                      --out-dir <OUTPUT_FOLDER_PATH_LABELS>
                                                                                  
 ```
