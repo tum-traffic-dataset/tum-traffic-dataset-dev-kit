@@ -1,6 +1,7 @@
 import argparse
 import glob
 import os
+import shutil
 
 from tqdm import tqdm
 
@@ -22,14 +23,22 @@ def copy_to_output(
 ):
     for subset in subsets:
         for sensor in sensors:
+            # Determine the input folder path
             input_folder_path = os.path.join(dataset_root_folder_path, subset, sensor_modality, sensor)
-            file_paths_sub_set = sorted(glob.glob(input_folder_path + "/*"))
+
+            # Get all files under this path
+            file_paths_sub_set = sorted(glob.glob(os.path.join(input_folder_path, "*")))
+            
             for file_path_sub_set in file_paths_sub_set:
                 file_name_in_sub_set = os.path.basename(file_path_sub_set)
+                
+                # If the filenames match, perform a copy
                 if file_name == file_name_in_sub_set:
                     input_file_path = os.path.join(input_folder_path, file_name)
                     output_file_path = os.path.join(output_folder_path, file_name)
-                    os.system(f"cp {input_file_path} {output_file_path}")
+
+                    # Use shutil.copy which perform same behavior on Linux and Windows to copy files
+                    shutil.copy(input_file_path, output_file_path)
                     return
 
 

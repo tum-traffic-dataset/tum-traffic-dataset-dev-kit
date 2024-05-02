@@ -87,6 +87,20 @@ Add dev kit's root directory to `PYTHONPATH`:
 export PYTHONPATH=$PYTHONPATH:/home/<USERNAME>/tum-traffic-dataset-dev-kit/
 ```
 
+### 🐳 Using Dev-Kit with Docker
+
+We provide a Dockerfile to build an image. Make sure your docker version is >= 19.03.
+
+```bash
+# Building a Docker Image
+docker build -t tum-traffic-dataset-dev-kit .
+
+# Run the Docker container, assuming you've set the DATA_DIR environment variable here
+docker run --gpus all --shm-size=8g -it -v ${DATA_DIR}:/workspace/tum-traffic-dataset-dev-kit/data tum-traffic-dataset-dev-kit
+```
+
+Make sure your DATA_DIR environment variable points to the directory(volume name) containing the dataset. Additionally, the Docker commands above assume that your machine has GPU support and is configured with the appropriate NVIDIA driver and CUDA version.
+
 ## 📃  Dataset Structure
 #### 1) TUM Traffic A9 Highway Dataset (`TUMTraf-A9`) 
 The TUM Traffic A9 Highway Dataset (`TUMTraf-A9`) contains 5 subsets (`s00` to `s04`) and is structured in the following way:
@@ -225,9 +239,10 @@ python tum-traffic-dataset-dev-kit/src/visualization/visualize_image_with_3d_box
                                                                                       --output_folder_path_visualization <OUTPUT_FOLDER_PATH> \
                                                                                       --detections_coordinate_system_origin [s110_base,s110_lidar_ouster_south] \
                                                                                       --labels_coordinate_system_origin [s110_base,s110_lidar_ouster_south]
+                                                                                      --file_path_calibration_data <CALIB_FILE_PATH>
 ```
 
-| Visualization south2 in camera:`--viz_mode box3d,point_cloud` | Visualization south1 camera: `--vis_mode box2d,box3d,mask,track_history` |
+| Visualization south2 in camera:`--viz_mode box3d,point_cloud` | Visualization south1 camera: `--viz_mode box2d,box3d,mask,track_history` |
 |---------------------------------------------------------------|------------------------------------------------------------------------|
 <p float="left">
   <img src="img/1651673053_741453105_s110_camera_basler_south2_8mm.jpg" width="49%" />
@@ -247,7 +262,7 @@ python tum-traffic-dataset-dev-kit/src/visualization/visualize_point_cloud_with_
 
 Bird's Eye View            |  Side View
 :-------------------------:|:-------------------------:
-![](img/1688626050_947334296_s110_lidar_ouster_south_and_vehicle_lidar_robosense_registered_point_cloud_bev.jpg)  |  ![](img/1688626050_947334296_s110_lidar_ouster_south_and_vehicle_lidar_robosense_registered_point_cloud_custom_view.jpg)
+![bev](img/1688626050_947334296_s110_lidar_ouster_south_and_vehicle_lidar_robosense_registered_point_cloud_bev.jpg)  |  ![side_view](img/1688626050_947334296_s110_lidar_ouster_south_and_vehicle_lidar_robosense_registered_point_cloud_custom_view.jpg)
 
 ## ✴️️ Data Split
 
@@ -272,14 +287,25 @@ python tum-traffic-dataset-dev-kit/src/registration/point_cloud_registration.py 
                                                              --save_registered_point_clouds \
                                                              --output_folder_path_registered_point_clouds <OUTPUT_FOLDER_PATH_POINT_CLOUDS>
 ```
+Example:
+```
+python tum-traffic-dataset-dev-kit/src/registration/point_cloud_registration.py --folder_path_point_cloud_source "./tum-traffic-dataset-dev-kit/data/tum/a9_dataset_r02_split/train/point_clouds/s110_lidar_ouster_north" \
+                                                             --folder_path_point_cloud_target "./tum-traffic-dataset-dev-kit/data/tum/a9_dataset_r02_split/train/point_clouds/s110_lidar_ouster_south" \
+                                                             --save_registered_point_clouds --output_folder_path_registered_point_clouds "./tum-traffic-dataset-dev-kit/data/tum/a9_dataset_r02_reg/s110_lidar_ouster"
+```
 ![registered_point_cloud](./img/registered_point_cloud.png)
 
 ## 🧹 Data Cleaning
 A LiDAR preprocessing module reduces noise in point cloud scans:
 
 ```
-python tum-traffic-dataset-dev-kit/src/preprocessing/remove_noise_from_point_clouds.py --input_folder_path_point_clouds <INPUT_FOLDER_PATH_POINT_CLOUDS> \
+python tum-traffic-dataset-dev-kit/src/preprocessing/filter_noise_point_cloud.py --input_folder_path_point_clouds <INPUT_FOLDER_PATH_POINT_CLOUDS> \
                                                                                        --output_folder_path_point_clouds <OUTPUT_FOLDER_PATH_POINT_CLOUDS>
+```
+Example:
+```
+python tum-traffic-dataset-dev-kit/src/preprocessing/filter_noise_point_cloud.py --input_folder_path_point_clouds "./tum-traffic-dataset-dev-kit/data/tum/a9_dataset_r02_split/train/s110_lidar_ouster_north" \
+                                                                                       --output_folder_path_point_clouds "./tum-traffic-dataset-dev-kit/data/tum/a9_dataset_r02_split_no_noise/train/"
 ```
 ![noise_removal](./img/outlier_removal.png)
 
@@ -290,22 +316,27 @@ In addition, a data converter/exporter enables you to convert the labels from Op
 ### OpenLABEL to YOLO
 The following script converts the OpenLABEL labels into YOLO labels:
 ```
-python tum-traffic-dataset-dev-kit/src/converter/conversion_openlabel_to_yolo.py --input_folder_path_labels <INPUT_FOLDER_PATH_LABELS> \
+python tum-traffic-dataset-dev-kit/src/label_conversion/conversion_openlabel_to_yolo.py --input_folder_path_labels <INPUT_FOLDER_PATH_LABELS> \
                                                                                  --output_folder_path_labels <OUTPUT_FOLDER_PATH_LABELS>
 ```
 
 ### OpenLABEL to KITTI
 The following script converts the OpenLABEL labels into KITTI labels:
 ```
-python tum-traffic-dataset-dev-kit/src/converter/conversion_openlabel_to_kitti.py --root-dir <DATASET_ROOT_DIR> \
+python tum-traffic-dataset-dev-kit/src/label_conversion/conversion_openlabel_to_kitti.py --root-dir <DATASET_ROOT_DIR> \
                                                                                   --out-dir <OUTPUT_FOLDER_PATH_LABELS> \
                                                                                   --file-name-format [name,num]
 ```
-
+Example:
+```
+python tum-traffic-dataset-dev-kit/src/label_conversion/conversion_openlabel_to_kitti.py --root-dir "./tum-traffic-dataset-dev-kit/data/tum/a9_dataset_r02_split/" \
+                                                                                  --out-dir "./tum-traffic-dataset-dev-kit/data/tum/a9_dataset_r02_split_kitti/" \
+                                                                                  --file-name-format num
+```
 ### OpenLABEL to nuScenes
 The following script converts the OpenLABEL labels into nuScenes labels:
 ```
-python tum-traffic-dataset-dev-kit/src/converter/conversion_openlabel_to_nuscenes.py --root-path <DATASET_ROOT_DIR> \
+python tum-traffic-dataset-dev-kit/src/label_conversion/conversion_openlabel_to_nuscenes.py --root-path <DATASET_ROOT_DIR> \
                                                                                      --out-dir <OUTPUT_FOLDER_PATH_LABELS>
                                                                                  
 ```
