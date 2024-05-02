@@ -87,6 +87,20 @@ Add dev kit's root directory to `PYTHONPATH`:
 export PYTHONPATH=$PYTHONPATH:/home/<USERNAME>/tum-traffic-dataset-dev-kit/
 ```
 
+### 🐳 Using Dev-Kit with Docker
+
+We provide a Dockerfile to build an image. Make sure your docker version is >= 19.03.
+
+```bash
+# Building a Docker Image
+docker build -t tum-traffic-dataset-dev-kit .
+
+# Run the Docker container, assuming you've set the DATA_DIR environment variable here
+docker run --gpus all --shm-size=8g -it -v ${DATA_DIR}:/workspace/tum-traffic-dataset-dev-kit/data tum-traffic-dataset-dev-kit
+```
+
+Make sure your DATA_DIR environment variable points to the directory(volume name) containing the dataset. Additionally, the Docker commands above assume that your machine has GPU support and is configured with the appropriate NVIDIA driver and CUDA version.
+
 ## 📃  Dataset Structure
 #### 1) TUM Traffic A9 Highway Dataset (`TUMTraf-A9`) 
 The TUM Traffic A9 Highway Dataset (`TUMTraf-A9`) contains 5 subsets (`s00` to `s04`) and is structured in the following way:
@@ -273,14 +287,25 @@ python tum-traffic-dataset-dev-kit/src/registration/point_cloud_registration.py 
                                                              --save_registered_point_clouds \
                                                              --output_folder_path_registered_point_clouds <OUTPUT_FOLDER_PATH_POINT_CLOUDS>
 ```
+Example:
+```
+python tum-traffic-dataset-dev-kit/src/registration/point_cloud_registration.py --folder_path_point_cloud_source "./tum-traffic-dataset-dev-kit/data/tum/a9_dataset_r02_split/train/point_clouds/s110_lidar_ouster_north" \
+                                                             --folder_path_point_cloud_target "./tum-traffic-dataset-dev-kit/data/tum/a9_dataset_r02_split/train/point_clouds/s110_lidar_ouster_south" \
+                                                             --save_registered_point_clouds --output_folder_path_registered_point_clouds "./tum-traffic-dataset-dev-kit/data/tum/a9_dataset_r02_reg/s110_lidar_ouster"
+```
 ![registered_point_cloud](./img/registered_point_cloud.png)
 
 ## 🧹 Data Cleaning
 A LiDAR preprocessing module reduces noise in point cloud scans:
 
 ```
-python tum-traffic-dataset-dev-kit/src/preprocessing/remove_noise_from_point_clouds.py --input_folder_path_point_clouds <INPUT_FOLDER_PATH_POINT_CLOUDS> \
+python tum-traffic-dataset-dev-kit/src/preprocessing/filter_noise_point_cloud.py --input_folder_path_point_clouds <INPUT_FOLDER_PATH_POINT_CLOUDS> \
                                                                                        --output_folder_path_point_clouds <OUTPUT_FOLDER_PATH_POINT_CLOUDS>
+```
+Example:
+```
+python tum-traffic-dataset-dev-kit/src/preprocessing/filter_noise_point_cloud.py --input_folder_path_point_clouds "./tum-traffic-dataset-dev-kit/data/tum/a9_dataset_r02_split/train/s110_lidar_ouster_north" \
+                                                                                       --output_folder_path_point_clouds "./tum-traffic-dataset-dev-kit/data/tum/a9_dataset_r02_split_no_noise/train/"
 ```
 ![noise_removal](./img/outlier_removal.png)
 
@@ -302,7 +327,12 @@ python tum-traffic-dataset-dev-kit/src/label_conversion/conversion_openlabel_to_
                                                                                   --out-dir <OUTPUT_FOLDER_PATH_LABELS> \
                                                                                   --file-name-format [name,num]
 ```
-
+Example:
+```
+python tum-traffic-dataset-dev-kit/src/label_conversion/conversion_openlabel_to_kitti.py --root-dir "./tum-traffic-dataset-dev-kit/data/tum/a9_dataset_r02_split/" \
+                                                                                  --out-dir "./tum-traffic-dataset-dev-kit/data/tum/a9_dataset_r02_split_kitti/" \
+                                                                                  --file-name-format num
+```
 ### OpenLABEL to nuScenes
 The following script converts the OpenLABEL labels into nuScenes labels:
 ```
