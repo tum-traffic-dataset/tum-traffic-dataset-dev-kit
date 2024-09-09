@@ -71,12 +71,17 @@ def process_boxes(img, box_data, use_two_colors, input_type, camera_id, lidar_id
                         if full_mask is not None:
                             polygons = np.array(full_mask["val"]).reshape(-1, 2)
                             polygons = np.array([polygons], dtype=np.int32)
-                            polylines_list.append(polygons)
-                            # use fillConvexPoly to fill the mask
-                            overlay = img.copy()
-                            cv2.fillPoly(overlay, polygons, color_bgr)
-                            alpha = 0.5
-                            img = cv2.addWeighted(overlay, alpha, img, 1 - alpha, 0)
+                            if len(polygons) > 0:
+                                polylines_list.append(polygons)
+                                # use fillConvexPoly to fill the mask
+                                overlay = img.copy()
+                                print("test")
+
+                                cv2.fillPoly(overlay, polygons, color_bgr)
+                                alpha = 0.5
+
+                                img = cv2.addWeighted(overlay, alpha, img, 1 - alpha, 0)
+
 
                 if "box2d" in viz_mode:
                     # extract 2D box
@@ -528,6 +533,7 @@ if __name__ == "__main__":
 
     utils = VisualizationUtils()
 
+
     camera_perspectives = {
         "s040_camera_basler_north_50mm": None,
         "s040_camera_basler_north_16mm": None,
@@ -638,6 +644,7 @@ if __name__ == "__main__":
 
         if "box2d" in viz_mode or "box3d" in viz_mode or "box3d_projected" in viz_mode or "track_history" in viz_mode or "mask" in viz_mode:
             use_two_colors = label_file_path != "" and detection_file_path != ""
+
             if label_file_path != "":
                 # TODO: temp commented to improve speed, because track history is already calculated with set_track_history.py
                 # if "track_history" in viz_mode:
