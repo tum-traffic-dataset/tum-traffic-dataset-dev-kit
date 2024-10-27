@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 
 import uuid
-from internal.src.tracking.tracker import BoxTracker
+from src.tracking.sort import KalmanBoxTracker, Sort
 from src.utils.detection import save_to_openlabel, Detection
 from src.utils.vis_utils import VisualizationUtils
 from scipy.spatial.transform import Rotation as R
@@ -44,9 +44,8 @@ if __name__ == "__main__":
 
     mapping_id_to_uuid = generate_uuids(10000)
 
-    # TODO:
-    # create SDRT tracker
-    tracker = BoxTracker(max_prediction_age=int(args.max_age))
+    # create SORT tracker
+    tracker = Sort(max_age=int(args.max_age))
     # create PolyMOT tracker
     #tracker = PolyMOTTracker(max_prediction_age=int(args.max_age))
     for file_name in sorted(os.listdir(args.input_folder_path_boxes)):
