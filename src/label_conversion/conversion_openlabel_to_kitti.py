@@ -1,7 +1,7 @@
 from glob import glob
 
 import cv2
-from pypcd import pypcd
+from pypcd4 import pypcd4 as pypcd
 from tqdm import tqdm
 import argparse
 import json
