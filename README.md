@@ -62,6 +62,8 @@ Install the following dependencies:
 ```
 conda install -c conda-forge fvcore
 conda install -c conda-forge iopath
+conda install -c conda-forge ros-sensor-msgs
+conda install -c conda-forge pypcd4
 ```
 In case, you are using NVIDIA CUDA <11.6:
 ```
